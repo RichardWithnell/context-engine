@@ -91,10 +91,8 @@ int mptcp_check_local_capability(void)
     char line[512];
     ssize_t n;
     char * mptcp_enabled_path = "/proc/sys/net/mptcp/mptcp_enabled";
-    int enabled = 0;
 
     memset(line, 0, 512);
-
     fd = open(mptcp_enabled_path, O_RDONLY);
     if (fd == -1){
          print_error("Failed to open MPTCP file\n");

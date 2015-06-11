@@ -1,3 +1,8 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "../list.h"
 #include "route_enforcer.h"
 #include "../application_rules.h"
 #include "../resource_manager.h"
@@ -7,6 +12,7 @@
 enum {
     ADD_RULE,
     DELETE_RULE,
+    INSERT_RULE,
     REPLACE_RULE
 };
 
@@ -14,24 +20,29 @@ enum {
     NO_MATCH,
     PARTIAL_MATCH,
     FULL_MATCH,
-}
+};
 
 struct match_quality {
     int match_type;
     int match_failure;
-}
+};
 
 #define SPECIFIC_RULE_ADD_POSITION 3
 
-static int default_rule_line = 4;
-
-int init_iptables(void)
+int init_iptables_context(void)
 {
     int ret_val = 0;
+    char *command = malloc(sizeof(char)*512);
 
+    memset(command, 0, 512);
+
+    iptables_run("/usr/local/sbin/iptables -D OUTPUT -t mangle -j CONTEXT");
+
+    iptables_flush_chain("CONTEXT", "mangle");
+    iptables_delete_chain("CONTEXT", "mangle");
     iptables_create_chain("CONTEXT", "mangle");
-    iptables_run("/usr/local/sbin/iptables -A OUTPUT -t mangle -j CONTEXT");
 
+    iptables_run("/usr/local/sbin/iptables -A OUTPUT -t mangle -j CONTEXT");
     iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --restore-mark");
     iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -m mark ! --mark 0 -j ACCEPT");
     iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --save-mark");
@@ -39,18 +50,12 @@ int init_iptables(void)
     return ret_val;
 }
 
-int select_default_resource(struct network_resource *nr, struct application_spec *as, List * iptables_rules)
-{
-
-    return 0;
-}
 
 /*Returns 0 for ok*/
 int resource_requirement_cmp(
   struct application_spec *as,
   struct network_resource *candidate)
 {
-    int match = FULL_MATCH;
     int fail_count = 0;
 
     struct path_stats *ps;
@@ -76,28 +81,20 @@ int resource_requirement_cmp(
     loss_req = application_spec_get_required_loss(as);
     jitter_req = application_spec_get_required_jitter(as);
 
-    if(bw_req > bw) {
-        match = PARTIAL_MATCH;
+    if(bw_req > bw && bw_req > 0) {
         fail_count++;
     }
 
-    if(latency_req < latency) {
-        match = PARTIAL_MATCH;
+    if(latency_req < latency && latency_req >= 0) {
         fail_count++;
     }
 
-    if(jitter_req < jitter) {
-        match = PARTIAL_MATCH;
+    if(jitter_req < jitter && jitter_req >= 0) {
         fail_count++;
     }
 
-    if(loss_req < loss) {
-        match = PARTIAL_MATCH;
+    if(loss_req < loss && loss_req >= 0) {
         fail_count++;
-    }
-
-    if(fail_count >= 4){
-        match = NO_MATCH;
     }
 
     return fail_count;
@@ -129,12 +126,13 @@ int create_iptables_string(struct network_resource *nr, struct application_spec 
 {
     char protocol[4];
     char mod_char = 0;
-    unsigned short dport = 0;
-    unsigned int mark = 0;
-    unsigned int line = 0;
-    unsigned int old_line = 0;
+    char *string_builder = (char*)0;
+    char *tmp = (char*)0;
 
     switch(mode){
+        case INSERT_RULE:
+            mod_char = 'I';
+            break;
         case ADD_RULE:
             mod_char = 'A';
             break;
@@ -151,7 +149,7 @@ int create_iptables_string(struct network_resource *nr, struct application_spec 
     }
 
     memset(protocol, 0, 4);
-    switch(application_spec_get_protocol(rule)){
+    switch(application_spec_get_proto(as)){
         case TCP:
             strncpy(protocol, "TCP", 3);
             break;
@@ -167,13 +165,37 @@ int create_iptables_string(struct network_resource *nr, struct application_spec 
         return -1;
     }
 
-    sprintf(string,
-        "iptables -%c CONTEXT -m mark --mark 0 -p %s --dport %d --ctstate NEW -t mangle -j MARK --set-mark %d",
-            mod_char,
-            protocol,
-            application_spec_get_dport(dport),
-            network_resource_get_table(nr));
+    string_builder = malloc(sizeof(char)*512);
+    memset(string_builder, 0, 512);
+    tmp = malloc(sizeof(char)*512);
+    memset(tmp, 0, 512);
 
+    /*
+    "iptables -I CONTEXT 3 -m mark --mark 0 -p tcp --dport 80 -m conntrack --ctstate NEW -t mangle -j MARK --set-mark 4"
+    */
+
+    sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -p %s", mod_char, protocol);
+
+    if(application_spec_get_dport(as)){
+        sprintf(tmp, " --dport %d", application_spec_get_dport(as));
+        strcat(string_builder, tmp);
+    }
+
+    if(application_spec_get_daddr(as)){
+        sprintf(tmp, " --daddr %s", ip_to_str(htonl(application_spec_get_daddr(as))));
+        strcat(string_builder, tmp);
+    }
+
+    strcat(string_builder, " -m conntrack --ctstate NEW -t mangle");
+
+    if(mode == ADD_RULE || mode == INSERT_RULE){
+        sprintf(tmp, "-j MARK --set-mark %d", network_resource_get_table(nr));
+        strcat(string_builder, tmp);
+    }
+
+    strcpy(string, string_builder);
+    free(tmp);
+    free(string_builder);
     return 0;
 }
 
@@ -184,12 +206,12 @@ int install_iptables_rule(struct network_resource *nr, struct application_spec *
 
     rule = iptables_mark_rule_alloc();
 
-    iptables_mark_rule_set_line(rule, line);
-    iptables_mark_rule_set_mark(rule, mark);
-    iptables_mark_rule_set_daddr(rule, daddr);
-    iptables_mark_rule_set_dport(rule, dport);
-    iptables_mark_rule_set_table(rule, table);
-    iptables_mark_rule_set_chain(rule, chain);
+    iptables_mark_rule_set_line(rule, SPECIFIC_RULE_ADD_POSITION);
+    iptables_mark_rule_set_mark(rule, network_resource_get_table(nr));
+    iptables_mark_rule_set_daddr(rule, application_spec_get_daddr(as));
+    iptables_mark_rule_set_dport(rule, application_spec_get_dport(as));
+    iptables_mark_rule_set_table(rule, "mangle");
+    iptables_mark_rule_set_chain(rule, "CONTEXT");
 
     list_for_each(rule_item, iptables_rules){
         struct iptables_mark_rule *r;
@@ -197,7 +219,6 @@ int install_iptables_rule(struct network_resource *nr, struct application_spec *
         r = (struct iptables_mark_rule*)rule_item->data;
         if(!iptables_mark_rule_cmp(rule, r)){
             /*Rules Match*/
-
         }
     }
 
@@ -206,9 +227,8 @@ int install_iptables_rule(struct network_resource *nr, struct application_spec *
 
 int route_selector(List * resource_list, List * app_specs, List * iptables_rules)
 {
-    Litem resource_item;
-    Litem app_spec_item;
-    Litem iptables_rule_item;
+    Litem *resource_item;
+    Litem *app_spec_item;
 
     struct network_resource *candidate = (struct network_resource *)0;
 
@@ -239,6 +259,8 @@ int route_selector(List * resource_list, List * app_specs, List * iptables_rules
             }
         }
 
-        install_iptables_rule(candidate, app_spec, iptables_rules);
+        install_iptables_rule(candidate, spec, iptables_rules);
     }
+
+    return 0;
 }

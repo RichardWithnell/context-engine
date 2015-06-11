@@ -28,4 +28,4 @@ wifi: wifi_condition.c condition.c condition.h
 
 
 clean:
-	rm *.o *.so
+	- rm -rf *.o *.so

@@ -156,8 +156,8 @@ int get_abing_bandwidth(char *host, char *localaddr, struct path_stats *stats)
 
     //listen to what tail writes to its standard output
     while(fgets(line, sizeof(line), output)) {
-        int i = 0;
-        char *pch, *ptr;
+        //int i = 0;
+        //char *pch, *ptr;
 
         if(strstr(line, "ABw-Xtr-DBC") && strstr(line, "F:")){
             char bw_string[128];

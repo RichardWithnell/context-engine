@@ -2,7 +2,7 @@
 #define CONTEXT_LIBRARY
 
 #include "conditions/condition.h"
-#include "policy.h"
+//#include "policy.h"
 #include "debug.h"
 
 #define CONTEXT_LIBRARY_PATH_SIZE 512

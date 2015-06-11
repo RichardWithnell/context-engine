@@ -34,13 +34,9 @@ void iptables_mark_rule_free(struct iptables_mark_rule *rule);
 struct iptables_mark_rule * iptables_mark_rule_alloc(void);
 
 /*Function*/
-int iptables_mod_rule(struct iptables_mark_rule *rule, struct iptables_mark_rule *rule2, int mode);
-int iptables_replace_rule(struct iptables_mark_rule *old_rule, struct iptables_mark_rule *new_rule);
-int iptables_delete_rule(struct iptables_mark_rule *rule);
-int iptables_add_rule(struct iptables_mark_rule *rule);
-int iptables_flush(void);
+int iptables_flush_chain(char *chain_name, char *table);
 int iptables_delete_chain(char *chain_name, char *table);
 int iptables_create_chain(char *chain_name, char *table);
-int iptables_init(void);
+int iptables_run(char * command);
 
 #endif

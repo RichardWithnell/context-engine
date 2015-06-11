@@ -108,11 +108,8 @@ void network_resource_list_put_cb(List *l, Litem *item, void *data)
 
 void network_resource_list_rem_cb(List *l, Litem *item, void *data)
 {
-    int
-    blocking = 0;
+    int blocking = 0;
     struct network_resource *nr = (struct network_resource*)0;
-
-    blocking = (int*)data;
 
     nr = (struct network_resource*)item->data;
 

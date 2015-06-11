@@ -4,7 +4,7 @@
 
 LIB_PATH = /usr/lib/
 INC_PATH = /usr/include/libnl3
-LDFLAGS = -lm -lnl-3 -lnl-route-3 -lnl-genl-3 -lrt -lmnl -lpthread -lnetfilter_conntrack -ldl
+LDFLAGS = -lm -lnl-3 -lnl-genl-3 -lrt -lmnl -lpthread -lnetfilter_conntrack -ldl
 CC=gcc
 CFLAGS= -g -Wall
 
@@ -24,6 +24,8 @@ endif
 SRC_PATH=src/
 BUILD_PATH=build/$(ARCH)/
 BIN_PATH=bin/$(ARCH)/
+TEST_PATH=test/
+TEST_BIN_PATH=test/bin/
 
 OBJS =	$(BUILD_PATH)lmnl_interface.o \
 		$(BUILD_PATH)list.o \
@@ -47,9 +49,15 @@ OBJS =	$(BUILD_PATH)lmnl_interface.o \
 		$(BUILD_PATH)iptables_rule.o \
 		$(BUILD_PATH)application_rules.o \
 		$(BUILD_PATH)policy_handler.o \
+		$(BUILD_PATH)route_enforcer.o \
 		cjson/cJSON.o
 
 all: context-engine
+
+tests: test_route_enforcer
+
+test_bin_dir:
+	@if [ ! -d "$(TEST_BIN_PATH)" ]; then mkdir -p $(TEST_BIN_PATH); fi;
 
 build_arch_dir:
 	@if [ ! -d "$(BUILD_PATH)" ]; then mkdir -p $(BUILD_PATH); fi;
@@ -66,8 +74,15 @@ cjson:
 condition_libs:
 	make -C "src/conditions/"
 
+test_route_enforcer: test_bin_dir cjson $(OBJS)
+	$(CC) $(CFLAGS) -o $(TEST_BIN_PATH)route_enforcer_test $(TEST_PATH)route_enforcer_test.c $(OPTS) $(OBJS) -I$(INC_PATH) $(LDFLAGS)
+
+
 $(BUILD_PATH)condition.o: $(SRC_PATH)conditions/condition.c $(SRC_PATH)conditions/condition.h $(SRC_PATH)policy.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)conditions/condition.c  -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)condition.o
+
+$(BUILD_PATH)route_enforcer.o: $(SRC_PATH)flow_manager/route_enforcer.c $(SRC_PATH)flow_manager/mptcp_state.h $(SRC_PATH)flow_manager/route_enforcer.h
+	$(CC) $(CFLAGS) -c $(SRC_PATH)flow_manager/route_enforcer.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)route_enforcer.o
 
 $(BUILD_PATH)policy_handler.o: $(SRC_PATH)flow_manager/policy_handler.c $(SRC_PATH)flow_manager/mptcp_state.h $(SRC_PATH)flow_manager/policy_handler.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)flow_manager/policy_handler.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)policy_handler.o
@@ -98,7 +113,6 @@ $(BUILD_PATH)resource_manager.o: $(SRC_PATH)resource_manager.c $(SRC_PATH)resour
 
 $(BUILD_PATH)link_manager.o: $(SRC_PATH)link_manager.c $(SRC_PATH)link_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)link_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_manager.o
-
 
 $(BUILD_PATH)link_loader.o: $(SRC_PATH)link_loader.c $(SRC_PATH)resource_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)link_loader.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_loader.o
@@ -134,8 +148,11 @@ $(BUILD_PATH)queue.o: $(SRC_PATH)queue.c $(SRC_PATH)queue.h
 $(BUILD_PATH)list.o: $(SRC_PATH)list.c $(SRC_PATH)list.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)list.c $(OPTS) -o $(BUILD_PATH)list.o
 
+test_clean:
+	- rm -rf $(TEST_BIN_PATH)*
+
 clean:
 	@echo "Cleaning..."
 	make clean -C "cjson/"
 	make clean -C "src/conditions/"
-	- rm $(BUILD_PATH)* $(BIN_PATH)*
+	- rm -rf $(BUILD_PATH)* $(BIN_PATH)*

@@ -1,7 +1,6 @@
 #ifndef CONTEXT_ACTION
 #define CONTEXT_ACTION
 
-#include "policy.h"
 #include "debug.h"
 
 enum {

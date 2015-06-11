@@ -69,8 +69,8 @@ FILE * execv_and_pipe(char * binary, char *command, int *pid_out)
     int pipefd[2];
     FILE* output;
     char ** cmd = (char**)0;
-
-    cmd = string_split(command, ' ');
+    const char delim = ' ';
+    cmd = string_split(command, delim);
 
     pipe(pipefd); //create a pipe
     pid = fork(); //span a child process
@@ -80,7 +80,7 @@ FILE * execv_and_pipe(char * binary, char *command, int *pid_out)
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
 
-        execv("/usr/local/sbin/iptables", cmd);
+        execv(binary, cmd);
     }
 
     close(pipefd[1]);
@@ -293,13 +293,17 @@ char** string_split(char* a_str, const char a_delim)
     /* Add space for trailing token. */
     count += last_comma < (a_str + strlen(a_str) - 1);
 
+    count++;
+
     /* Add space for terminating null string so caller
        knows where the list of returned strings ends. */
-    result = malloc(sizeof(char*) * ++count);
-
+    result = malloc(sizeof(char*) * count);
+    memset(result, 0, sizeof(char*) * count);
     if (result) {
         size_t idx  = 0;
-        char* token = strtok(a_str, delim);
+        char* token = (char*)0;
+
+        token = strtok(a_str, delim);
 
         while (token) {
             if(!(idx < count)){
