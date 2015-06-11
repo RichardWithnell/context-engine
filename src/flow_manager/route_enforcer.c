@@ -21,6 +21,10 @@ struct match_quality {
     int match_failure;
 }
 
+#define SPECIFIC_RULE_ADD_POSITION 3
+
+static int default_rule_line = 4;
+
 int init_iptables(void)
 {
     int ret_val = 0;
@@ -33,6 +37,12 @@ int init_iptables(void)
     iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --save-mark");
 
     return ret_val;
+}
+
+int select_default_resource(struct network_resource *nr, struct application_spec *as, List * iptables_rules)
+{
+
+    return 0;
 }
 
 /*Returns 0 for ok*/

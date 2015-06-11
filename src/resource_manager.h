@@ -36,13 +36,27 @@ enum {
 };
 
 enum {
+    LINK_EVENT_UNSPEC,
+    LINK_EVENT_UP,
+    LINK_EVENT_DOWN
+};
+
+enum {
     LINK_TYPE_UNSPEC,
     LINK_TYPE_CELLULAR,
     LINK_TYPE_WIFI,
     LINK_TYPE_ETHERNET,
     LINK_TYPE_WIMAX,
     LINK_TYPE_SATELLITE,
+    LINK_TYPE_BLUETOOTH,
     __LINK_TYPE_MAX
+};
+
+enum {
+    RESOURCE_AVAILABILITY_UNPSEC,
+    RESOURCE_AVAILABILE,
+    RESOURCE_UNAVAILABLE,
+    __RESOURCE_AVAILABILITY_MAX
 };
 
 typedef void * (*resource_availability_cb_t)(struct network_resource *nr, void *data);
@@ -55,11 +69,15 @@ struct network_resource *mnl_route_to_resource(struct mnl_route *route);
 void network_resource_list_put_cb(List *l, Litem *item, void *data);
 void network_resource_list_rem_cb(List *l, Litem *item, void *data);
 
-int network_resource_add_to_list(List *nr_list, struct mnl_route *rt);
-int network_resource_delete_from_list(List *nr_list, struct mnl_route *rt);
+struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt);
+struct network_resource * network_resource_delete_from_list(List *nr_list, struct mnl_route *rt);
 
 struct network_resource * network_resource_alloc(void);
 void network_resource_free(struct network_resource *nr);
+
+void network_resource_set_multipath(struct network_resource *nr, uint32_t mp);
+void network_resource_set_available(struct network_resource *nr, uint32_t available);
+
 int network_resource_get_table(struct network_resource *nr);
 char *network_resource_get_ifname(struct network_resource *nr);
 int network_resource_get_index(struct network_resource *nr);
@@ -68,6 +86,9 @@ int network_resource_get_gateway(struct network_resource *nr);
 int network_resource_get_prio(struct network_resource *nr);
 int network_resource_get_family(struct network_resource *nr);
 int network_resource_get_link_type(struct network_resource *nr);
+uint32_t network_resource_get_multipath(struct network_resource *nr);
+uint32_t network_resource_get_available(struct network_resource *nr);
+
 struct path_stats * network_resource_get_state(struct network_resource *nr);
 
 int network_resource_is_running(struct network_resource *nr);

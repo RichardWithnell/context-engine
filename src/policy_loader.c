@@ -14,13 +14,7 @@
 #define CONDKEY_TO_STR(x) condition_keystr[x]
 
 
-struct policy_definition
-{
-    uint8_t conditions_met;
-    uint8_t actions_performed;
-    List *conditions;
-    List *actions;
-};
+
 
 struct action *parse_json_action(cJSON *json)
 {
@@ -30,33 +24,50 @@ struct action *parse_json_action(cJSON *json)
 
     cJSON *link_id = (cJSON*)0;
     cJSON *do_act = (cJSON*)0;
-
+    cJSON *mode = (cJSON*)0;
 
     if(!json){
         return act;
     }
 
     act = action_alloc();
-    if(act){
+    if(act) {
         print_verb("Action alloced\n");
     }
 
     link_id = cJSON_GetObjectItem(json, "link_id");
-    if(!link_id){
+    if(!link_id) {
         print_error("Could not parse link_id\n");
         return act;
     }
 
     do_act = cJSON_GetObjectItem(json, "do");
-    if(!do_act){
+    if(!do_act) {
         print_error("Could not parse do\n");
         return act;
+    }
+
+    mode = cJSON_GetObjectItem(json, "mode");
+    if(mode) {
+        print_verb("Found Mode: %s\n", mode->valuestring);
+        return act;
+    } else {
+        print_error("No Mode Set\n");
+    }
+
+    if(!strcmp(mode->valuestring, "hard")){
+        action_set_mode(act, ACTION_MODE_HARD);
+    } else {
+        action_set_mode(act, ACTION_MODE_SOFT);
     }
 
     action_id = find_action_id(do_act->valuestring);
 
     action_set_action(act, action_id);
     action_set_link_name(act, link_id->valuestring);
+
+
+
     return act;
 }
 
@@ -106,8 +117,6 @@ struct condition *parse_json_condition(cJSON *json, List *context_libs)
     } else {
         print_error("No Link\n");
     }
-
-    
 
     if(cond){
         print_debug("Parse condition called successfully\n");
@@ -162,12 +171,7 @@ List * load_policy_file(char *config_file, List *context_libs)
                 cJSON *condition;
                 cJSON *action;
 
-                pd = malloc(sizeof(struct policy_definition));
-                pd->conditions = malloc(sizeof(List));
-                pd->actions = malloc(sizeof(List));
-
-                list_init(pd->conditions);
-                list_init(pd->actions);
+                pd = policy_definition_alloc();
 
                 condition = cJSON_GetObjectItem(p, "condition");
                 if(condition){
@@ -178,10 +182,8 @@ List * load_policy_file(char *config_file, List *context_libs)
                             struct condition *c = (struct condition *)0;
                             c = parse_json_condition(cond, context_libs);
                             if(c){
-                                Litem *citem = malloc(sizeof(Litem));
-                                citem->data = c;
-                                list_put(pd->conditions, citem);
-
+                                condition_set_parent(c, pd);
+                                policy_definition_put_condition(pd, c);
                                 context_library_add_condition(context_libs, c);
                             } else {
                                 return (List*)0;
@@ -200,9 +202,7 @@ List * load_policy_file(char *config_file, List *context_libs)
                         if(act){
                             struct action *a = parse_json_action(act);
                             if(a){
-                                Litem *aitem = malloc(sizeof(Litem));
-                                aitem->data = a;
-                                list_put(pd->actions, aitem);
+                                policy_definition_put_action(pd, a);
                             } else {
                                 return (List*)0;
                             }

@@ -8,7 +8,7 @@ LDFLAGS = -lm -lnl-3 -lnl-route-3 -lrt -lmnl -lpthread -lnetfilter_conntrack
 CC=gcc
 CFLAGS= -g -Wall
 
-all: battery bandwidth location
+all: battery bandwidth location wifi
 
 battery: battery_condition.c condition.c condition.h
 	$(CC) $(CFLAGS) -fPIC -c battery_condition.c condition.c
@@ -21,6 +21,11 @@ bandwidth: bandwidth_condition.c condition.c ../bandwidth_parser.c condition.h .
 location: location_condition.c condition.c condition.h
 	$(CC) $(CFLAGS) -fPIC -c location_condition.c condition.c
 	gcc -shared -Wl,-soname,liblocation_policy.so -o liblocation_policy.so location_condition.o condition.o
+
+wifi: wifi_condition.c condition.c condition.h
+	$(CC) $(CFLAGS) -fPIC -c wifi_condition.c condition.c
+	gcc -shared -Wl,-soname,libwifi_policy.so -o libwifi_policy.so wifi_condition.o condition.o
+
 
 clean:
 	rm *.o *.so

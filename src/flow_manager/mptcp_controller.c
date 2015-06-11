@@ -146,7 +146,7 @@ int mod_subflow(
     return 0;
 }
 
-int create_subflow(
+int mptcp_create_subflow(
   struct mptcp_state *mp_state,
   uint32_t src_ip,
   uint16_t src_locid,
@@ -156,7 +156,7 @@ int create_subflow(
     return mod_subflow(mp_state, src_ip, src_locid, conn, CONTEXT_CMD_CREATE_SUBFLOW);
 }
 
-int remove_subflow(
+int mptcp_remove_subflow(
   struct mptcp_state *mp_state,
   uint32_t src_ip,
   uint16_t src_locid,
@@ -168,12 +168,13 @@ int remove_subflow(
 
 static int remove_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_state)
 {
+    mptcp_control_cb_t cb;
     struct nlattr *attrs = (struct nlattr *)0;
     struct nlattr *nla = (struct nlattr *)0;
     int attrlen = 0;
     int rem = 0;
     int token = 0;
-    struct connection *conn;
+    struct connection conn;
 
     attrlen = genlmsg_attrlen(ghdr, 0);
     attrs = genlmsg_attrdata(ghdr, 0);
@@ -188,35 +189,18 @@ static int remove_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_sta
         }
     }
 
-    mptcp_state_lock(mp_state);
-    conn = mptcp_state_pop_connection_by_token(mp_state, token);
-    mptcp_state_unlock(mp_state);
+    conn.token = token;
 
-    if(conn){
-        struct event_flow ev;
-        ev.super.code = MPTCP_REM_FLOW;
-        ev.daddr = conn->daddr;
-        ev.saddr = conn->saddr;
-        ev.dport = conn->dport;
-        ev.sport = 0;
-        ev.token = conn->token;
-        //handle_event((struct event*)&ev, mp_state);
-    } else {
-        struct event_flow ev;
-        ev.super.code = MPTCP_REM_FLOW;
-        ev.daddr = 0;
-        ev.saddr = 0;
-        ev.dport = 0;
-        ev.sport = 0;
-        ev.token = 0;
-        //handle_event((struct event*)&ev, mp_state);
+    cb = mptcp_state_get_event_cb(mp_state);
+    if(cb){
+        cb(mp_state, &conn, MPTCP_REM_CONN, mptcp_state_get_cb_data(mp_state));
     }
-
     return 0;
 }
 
 static int add_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_state)
 {
+    mptcp_control_cb_t cb;
     struct nlattr *attrs;
     struct nlattr *nla;
     int attrlen;
@@ -259,18 +243,10 @@ static int add_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_state)
         return -1;
     }
 
-    mptcp_state_lock(mp_state);
-    mptcp_state_put_connection(mp_state, new_conn);
-    mptcp_state_unlock(mp_state);
-
-    struct event_flow ev;
-    ev.super.code = MPTCP_NEW_FLOW;
-    ev.daddr = new_conn->daddr;
-    ev.saddr = new_conn->saddr;
-    ev.dport = new_conn->dport;
-    ev.sport = 0;
-    ev.token = new_conn->token;
-//    handle_event((struct event*)&ev, mp_state);
+    cb = mptcp_state_get_event_cb(mp_state);
+    if(cb){
+        cb(mp_state, new_conn, MPTCP_REM_CONN, mptcp_state_get_cb_data(mp_state));
+    }
 
     return 0;
 }

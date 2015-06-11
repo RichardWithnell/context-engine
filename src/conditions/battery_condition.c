@@ -130,7 +130,7 @@ float get_battery_voltage(void)
 void fire_callback(struct condition *c, condition_cb_t cb)
 {
     if(cb && !condition_get_met(c)){
-        print_verb("Firing callback: %d\n", condition_get_met(c));
+        //print_verb("Firing callback: %d\n", condition_get_met(c));
         condition_set_met(c, 1);
         cb(c, 0);
     }
@@ -140,7 +140,6 @@ struct condition * check_voltage_condition(struct condition *c, float voltage, c
 {
     uint32_t comparator = condition_get_comparator(c);
     float *v = condition_get_value(c);
-
 
     switch(comparator){
         case COMPARATOR_LT:

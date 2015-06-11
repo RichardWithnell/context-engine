@@ -1,0 +1,103 @@
+Conditions
+#########################
+
+- Finalize location / bandwidth conditions.
+- Specify condition libaries to load in config file.
+
+Resource Monitor
+#########################
+
+ - Add passive bandwidth measurements
+
+Policy Handler
+#########################
+ - Ensure iptables rules are functional
+
+
+
+Policy Framework Events
+#########################
+Behaviour
+
+ - Context Changed
+    - Example
+        - Battery Life
+        - Bandwidth Allowance
+    - Events
+        - Add Flow
+            source address, destination address, destination port
+        - Remove Flow
+            source address, destination address, destination port
+        - Modify Connection
+            - Enable / Disable
+            - Soft modify
+                - Set to unavailable in software.
+                - Modify route allocation.
+            - Hard modify.
+                - Manually take down interface
+                    - Let Link State Changed handle changes.
+
+
+ - Link State Changed
+    - Example
+        - eth0 up
+        - WiFi Down
+    - Events
+        - Multipath
+            - ifup: create new subflows
+            - ifdown: close old subflows
+        - Singlepath
+            - ifup: nothing, wait on metric recalculation.
+            - ifdown: reallocate rules / migrate
+
+ - Metrics Changed
+    - Example
+        - Bandwidth
+        - Delay
+    - Events
+        - Re-Allocate Future Single Path flows
+        - Migrate MPTCP Capable Single Path Flows
+        - Ignore Normal Flows.
+
+ - MPTCP Connection event
+    - Example
+        Connection Established
+        Connection Destroyed
+    - Events
+        Create /  Remove additional Multipath Subflows
+
+
+Identified Functions
+    - Context
+
+    - Link State
+        ifdown:
+            migrate_mptcp_subflow(struct connection *c, List *network_resources);
+            migrate_all_mptcp_subflows(List *connections, List *network_resources);
+
+
+            close_old_subflows();
+        ifup:
+
+            create_mptcp_subflows(List *connections, struct network_resource *nr);
+
+
+    - Metrics
+        reallocate_routes();
+
+    - MPTCP
+        create_mptcp_subflows(List *connections, struct network_resource *nr);
+        create_all_mptcp_subflows(List *connections, List *struct network_resource *nr);
+
+        select_default_route(struct network_resource *nr);
+
+        select_route_for_application(List *network_resources, struct application_spec *spec){
+            struct network_resource *nr find_best_route(network_resource, spec)
+            delete_old_rule(network_resources, spec)
+            install_new_rule(network_resources, spec)
+        }
+
+        reallocate_routes(List *network_resources, List *application_specs){
+            for each application:
+                select_route_for_application(network_resource, application);
+        }

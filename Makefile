@@ -28,16 +28,18 @@ BIN_PATH=bin/$(ARCH)/
 OBJS =	$(BUILD_PATH)lmnl_interface.o \
 		$(BUILD_PATH)list.o \
 		$(BUILD_PATH)queue.o \
+		$(BUILD_PATH)policy_definition.o \
 		$(BUILD_PATH)policy_loader.o \
 		$(BUILD_PATH)link_monitor.o \
 		$(BUILD_PATH)condition.o \
 		$(BUILD_PATH)context_library.o \
 		$(BUILD_PATH)resource_manager.o \
+		$(BUILD_PATH)link_manager.o \
 		$(BUILD_PATH)link_loader.o \
 		$(BUILD_PATH)mptcp_controller.o \
 		$(BUILD_PATH)mptcp_state.o \
-		$(BUILD_PATH)path_metrics.o \
 		$(BUILD_PATH)metric_tools.o \
+		$(BUILD_PATH)path_metrics.o \
 		$(BUILD_PATH)action.o \
 		$(BUILD_PATH)util.o \
 		$(BUILD_PATH)bandwidth_parser.o \
@@ -94,6 +96,10 @@ $(BUILD_PATH)bandwidth_parser.o: $(SRC_PATH)bandwidth_parser.c $(SRC_PATH)bandwi
 $(BUILD_PATH)resource_manager.o: $(SRC_PATH)resource_manager.c $(SRC_PATH)resource_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)resource_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)resource_manager.o
 
+$(BUILD_PATH)link_manager.o: $(SRC_PATH)link_manager.c $(SRC_PATH)link_manager.h
+	$(CC) $(CFLAGS) -c $(SRC_PATH)link_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_manager.o
+
+
 $(BUILD_PATH)link_loader.o: $(SRC_PATH)link_loader.c $(SRC_PATH)resource_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)link_loader.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_loader.o
 
@@ -114,6 +120,10 @@ $(BUILD_PATH)lmnl_interface.o: $(SRC_PATH)lmnl_interface.c $(SRC_PATH)lmnl_inter
 
 $(BUILD_PATH)policy_loader.o: $(BUILD_PATH)util.o $(BUILD_PATH)list.o cjson/cJSON.o $(SRC_PATH)policy.h $(SRC_PATH)policy_loader.c
 	$(CC) $(CFLAGS) -c $(SRC_PATH)policy_loader.c -o $(BUILD_PATH)policy_loader.o
+
+$(BUILD_PATH)policy_definition.o: $(SRC_PATH)policy.h $(SRC_PATH)policy_definition.c
+	$(CC) $(CFLAGS) -c $(SRC_PATH)policy_definition.c -o $(BUILD_PATH)policy_definition.o
+
 
 $(BUILD_PATH)util.o: $(SRC_PATH)util.c $(SRC_PATH)util.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)util.c -I$(INC_PATH) $(LDFLAGS) $(OPTS) -o $(BUILD_PATH)util.o

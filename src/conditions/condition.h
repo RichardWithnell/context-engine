@@ -53,6 +53,9 @@ struct condition *parse_condition(void *key, void *value, void *comparator);
 struct condition * condition_alloc(void);
 void condition_free(struct condition *c);
 
+void condition_set_parent(struct condition *c, struct policy_definition *pd);
+struct policy_definition * condition_get_parent(struct condition *c);
+
 void condition_set_link_name(struct condition *c, char *name);
 char * condition_get_link_name(struct condition *c);
 

@@ -20,6 +20,7 @@ static const char *action_keystr[__ACTION_MAX] = {
 struct action
 {
     void *data;
+    uint8_t mode;
     uint32_t force;
     uint32_t action;
     char link_name[ACTION_LINK_NAME_SIZE];
@@ -47,6 +48,31 @@ struct action * action_alloc(void)
     struct action *a = (struct action*)0;
     a = malloc(sizeof(struct action));
     return a;
+}
+
+void action_free(struct action *as)
+{
+    free(as);
+}
+
+uint8_t action_get_mode(struct action *a)
+{
+    return a->mode;
+}
+
+uint32_t action_get_action(struct action *a)
+{
+    return a->action;
+}
+
+char * action_get_link_name(struct action *a)
+{
+    return a->link_name;
+}
+
+void action_set_mode(struct action *a, uint8_t mode)
+{
+    a->mode = mode;
 }
 
 void action_set_action(struct action *a, uint32_t code)

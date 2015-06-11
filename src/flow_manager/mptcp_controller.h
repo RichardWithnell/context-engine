@@ -7,20 +7,13 @@
 
 #include "mptcp_state.h"
 
-typedef enum {
-	MPTCP_NEW_FLOW = 0x01,
-	MPTCP_REM_FLOW = 0x02,
-	MPTCP_NEW_ADDR = 0x03,
-	MPTCP_REM_ADDR = 0x04,
-} mptcp_event_codes;
-
-int create_subflow(
+int mptcp_create_subflow(
 	struct mptcp_state *mp_state,
 	uint32_t src_ip,
 	uint16_t src_locid,
 	struct connection *conn);
 
-int remove_subflow(
+int mptcp_remove_subflow(
 	struct mptcp_state *mp_state,
 	uint32_t src_ip,
 	uint16_t src_locid,

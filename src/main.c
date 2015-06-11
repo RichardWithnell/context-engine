@@ -14,6 +14,7 @@
 #include "queue.h"
 #include "list.h"
 #include "link_monitor.h"
+#include "link_manager.h"
 #include "debug.h"
 #include "resource_manager.h"
 #include "application_rules.h"
@@ -33,6 +34,7 @@ sem_t update_barrier;
 char *libs[] = {"src/conditions/libbattery_policy.so",
                     "src/conditions/libbandwidth_policy.so",
                     "src/conditions/liblocation_policy.so",
+                    "src/conditions/libwifi_policy.so",
                     0};
 
 void sig_handler(int signum)
@@ -68,22 +70,102 @@ int create_pid(void)
 
 void condition_cb(struct condition *c, void *data)
 {
-    print_debug("Condition Callback fired: %s\n", condition_get_key(c));
+    struct policy_definition *pd = (struct policy_definition*)0;
+    struct condition *condition = (struct condition*)0;
+    struct action *action = (struct action*)0;
+    List *conditions = (List*)0;
+    List *actions = (List*)0;
+    Litem *item = (Litem*)0;
+
+    pd = condition_get_parent(c);
+
+    if(!pd){
+        print_error("Conditions parent is null\n");
+        return;
+    }
+
+    conditions = policy_definition_get_conditions(pd);
+    if (!conditions){
+        print_error("Conditions list is null\n");
+        return;
+    }
+
+    actions = policy_definition_get_actions(pd);
+    if (!actions){
+        print_error("actions list is null\n");
+        return;
+    }
+
+    list_for_each(item, conditions){
+        condition = (struct condition*)item->data;
+        if(!condition){
+            print_error("Condition is null\n");
+            return;
+        }
+        if(!condition_get_met(condition)){
+            print_verb("Condition [%s] not met yet, wait\n", condition_get_key(condition));
+            return;
+        }
+    }
+    print_verb("All Conditions Met\n");
+    /*All conditions Met*/
+
+    list_for_each(item, actions){
+        action = (struct action*)item->data;
+        if(action_get_mode(action) == ACTION_MODE_HARD){
+            print_verb("Performing Hard Action\n");
+            switch(action_get_action(action)){
+                case ACTION_DISABLE:
+                    link_manager_down(action_get_link_name(action));
+                case ACTION_ENABLE:
+                    link_manager_up(action_get_link_name(action));
+            }
+        } else if (action_get_mode(action) == ACTION_MODE_SOFT) {
+            print_verb("Performing Soft Action\n");
+
+        } else {
+            print_error("Unknown action mode\n");
+        }
+    }
+
     return;
 }
 
-void * resource_availability_cb(struct network_resource *nr, void *data)
+void resource_down(struct network_resource *nr, struct policy_handler_state *ph)
 {
-    print_debug("Resource Availability Changed: %s\n",
+    policy_handler_route_change_cb_t cb;
+    print_debug("Resource Availability - Down: %s\n",
       network_resource_get_ifname(nr));
-    return (void*)0;
+
+    cb = policy_handler_state_get_route_cb(ph);
+    cb(nr, LINK_EVENT_DOWN, ph);
+
+    return (void)0;
 }
 
+void resource_up(struct network_resource *nr, struct policy_handler_state *ph)
+{
+    policy_handler_route_change_cb_t cb;
+
+    print_debug("Resource Availability - Up: %s\n",
+      network_resource_get_ifname(nr));
+
+    cb = policy_handler_state_get_route_cb(ph);
+    cb(nr, LINK_EVENT_UP, ph);
+
+    return (void)0;
+}
+
+void metric_change_cb(List *network_resources, void *data)
+{
+    print_debug("Metric change callback\n");
+    return;
+}
 
 int main(void)
 {
     struct network_resource_callback_data nr_cb_data;
-
+    struct policy_handler_state * ph_state;
     /*Define variables for libnl updates*/
     struct cache_monitor mon_data;
     pthread_t monitor_thread;
@@ -127,9 +209,6 @@ int main(void)
         (list_cb_t )network_resource_list_put_cb,
         (void*)&nr_cb_data);
 
-
-
-
     load_context_libs(context_libs, libs);
     policy_list = load_policy_file("./example/policy.cfg\0", context_libs);
     if(!policy_list){
@@ -170,7 +249,7 @@ int main(void)
         return -1;
     }
 
-    policy_handler_init();
+    ph_state = policy_handler_init(netres_list, application_specs);
 
     mon_data.queue = &update_queue;
     mon_data.lock = &update_lock;
@@ -181,7 +260,6 @@ int main(void)
 
 
     context_library_start(context_libs, condition_cb);
-
 
     while(running) {
         print_verb("Waiting on barrier\n");
@@ -202,10 +280,22 @@ int main(void)
                 continue;
             }
             if(u->type == UPDATE_ROUTE) {
+                struct network_resource *nr = (struct network_resource *)0;
                 if(u->action == ADD_RT) {
-                    network_resource_add_to_list(netres_list, (struct mnl_route*)u->update);
+                    nr = network_resource_add_to_list(netres_list, (struct mnl_route*)u->update);
+                    if(nr){
+                        resource_up(nr, ph_state);
+                    } else {
+                        print_error("Failed to create resource\n");
+                    }
                 } else if(u->action == DEL_RT) {
-                    network_resource_delete_from_list(netres_list, (struct mnl_route*)u->update);
+                    nr = network_resource_delete_from_list(netres_list, (struct mnl_route*)u->update);
+                    if(nr){
+                        resource_down(nr, ph_state);
+                        network_resource_free(nr);
+                    } else {
+                        print_error("Failed to pop a non null resource\n");
+                    }
                 }
             }
         }

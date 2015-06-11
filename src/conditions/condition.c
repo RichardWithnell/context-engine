@@ -88,6 +88,17 @@ void condition_free(struct condition *c)
     free(c);
 }
 
+void condition_set_parent(struct condition *c, struct policy_definition *pd)
+{
+    c->parent = pd;
+}
+
+
+struct policy_definition * condition_get_parent(struct condition *c)
+{
+    return c->parent;
+}
+
 char * condition_get_key(struct condition *c)
 {
     return c->key;

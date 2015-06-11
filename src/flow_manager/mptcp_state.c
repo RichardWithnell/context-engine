@@ -16,6 +16,58 @@ struct mptcp_state {
     pthread_mutex_t lock;
 };
 
+struct subflow * mptcp_connection_remove_subflow(struct connection *conn, uint32_t address)
+{
+    int idx = 0;
+    Litem *item;
+
+    list_for_each(item, conn->subflows){
+        struct subflow *sf = (struct subflow*)item->data;
+        if(sf->saddr == address){
+            list_remove(conn->subflows, idx);
+            free(item);
+            print_verb("Deleted network_resource from list\n");
+            return sf;
+        }
+        idx++;
+    }
+    return (struct subflow*)0;
+}
+
+void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uint32_t loc_id)
+{
+    struct subflow *s;
+    Litem *item;
+
+    s = malloc(sizeof(struct subflow));
+    s->saddr = address;
+    s->loc_id = loc_id;
+    item = malloc(sizeof(Litem));
+    item->data = s;
+    list_put(conn->subflows, item);
+}
+
+void * mptcp_state_get_cb_data(struct mptcp_state *state)
+{
+    return state->cb_data;
+}
+
+void mptcp_state_set_cb_data(struct mptcp_state *state, void* data)
+{
+    state->cb_data = data;
+}
+
+void mptcp_state_set_event_cb(struct mptcp_state *state, mptcp_control_cb_t cb, void *data)
+{
+    state->event_cb = cb;
+    state->cb_data = data;
+}
+
+mptcp_control_cb_t mptcp_state_get_event_cb(struct mptcp_state *state)
+{
+    return state->event_cb;
+}
+
 int conn_equals(struct connection *new_conn, struct connection *old_conn)
 {
     if(!new_conn || !old_conn){
@@ -41,6 +93,8 @@ int mptcp_check_local_capability(void)
     char * mptcp_enabled_path = "/proc/sys/net/mptcp/mptcp_enabled";
     int enabled = 0;
 
+    memset(line, 0, 512);
+
     fd = open(mptcp_enabled_path, O_RDONLY);
     if (fd == -1){
          print_error("Failed to open MPTCP file\n");
@@ -56,6 +110,15 @@ int mptcp_check_local_capability(void)
     print_verb("MPTCP Capability: %s\n", line);
 
     return atoi(line);
+}
+
+void mptcp_for_each_connection(struct mptcp_state *mp_state, connection_mod_cb_t cb, void *data)
+{
+    Litem *item;
+    list_for_each(item, mp_state->connections){
+        struct connection *c = item->data;
+        cb(mp_state, c, data);
+    }
 }
 
 struct connection *mptcp_find_connection(List *connections, uint32_t saddr, uint32_t daddr, uint32_t dport)

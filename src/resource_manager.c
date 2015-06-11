@@ -40,6 +40,7 @@ struct network_resource
     uint32_t prio;
     uint32_t family;
     uint32_t link_type;
+    uint64_t loc_id;
     char ifname[IFNAMSIZ];
     uint32_t multipath;
     uint32_t available;
@@ -100,6 +101,7 @@ void network_resource_list_put_cb(List *l, Litem *item, void *data)
     rtp->endpoint = measurement_endpoint;
     rtp->probe_frequency = PROBE_FREQUENCY;
 
+
     pthread_create(&(nr->resource_thread), NULL,
                (void*)&network_resource_thread_start, (void*)rtp);
 }
@@ -159,9 +161,11 @@ void * network_resource_thread_start(void *data)
             metric_update(nr->state, endpoint, local);
             if(metric_cmp(ps, nr->state)){
                 /*Fire Metric Change Callback*/
+                /*
                 if(nr->availability_cb){
                     nr->availability_cb(nr, nr->availability_data);
                 }
+                */
             }
             print_path_stats(nr->state, nr->ifname);
         } else {
@@ -205,7 +209,7 @@ int network_resource_cmp(struct network_resource *nr1, struct network_resource *
     return 0;
 }
 
-int network_resource_add_to_list(List *nr_list, struct mnl_route *rt)
+struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt)
 {
     Litem *item;
     struct network_resource *net_res;
@@ -213,7 +217,7 @@ int network_resource_add_to_list(List *nr_list, struct mnl_route *rt)
     if(!nr_list){
         print_verb("list is null\n");
 
-        return -1;
+        return (struct network_resource *)0;
     }
 
     net_res = mnl_route_to_resource(rt);
@@ -228,15 +232,15 @@ int network_resource_add_to_list(List *nr_list, struct mnl_route *rt)
     if(!item){
         print_verb("malloc failed\n");
 
-        return -1;
+        return (struct network_resource *)0;
     }
     item->data = net_res;
     list_put(nr_list, item);
     print_verb("network_resource added to list\n");
-    return 0;
+    return net_res;
 }
 
-int network_resource_delete_from_list(List *nr_list, struct mnl_route *rt)
+struct network_resource * network_resource_delete_from_list(List *nr_list, struct mnl_route *rt)
 {
     int idx = 0;
     Litem *item;
@@ -247,16 +251,15 @@ int network_resource_delete_from_list(List *nr_list, struct mnl_route *rt)
         struct network_resource *nr = item->data;
         if(!network_resource_cmp(net_res, nr)){
             list_remove(nr_list, idx);
-            network_resource_free(nr);
             free(item);
             print_verb("Deleted network_resource from list\n");
-            return 0;
+            return net_res;
         }
         idx++;
     }
     print_verb("network_resource not in list\n");
 
-    return -1;
+    return (struct network_resource *)0;
 }
 
 struct network_resource * network_resource_alloc(void)
@@ -309,6 +312,16 @@ void network_resource_free(struct network_resource *nr)
     free(nr);
 }
 
+void network_resource_set_multipath(struct network_resource *nr, uint32_t mp)
+{
+    nr->multipath = mp;
+}
+
+void network_resource_set_available(struct network_resource *nr, uint32_t available)
+{
+    nr->available = available;
+}
+
 int network_resource_is_running(struct network_resource *nr)
 {
     return nr->thread_running;
@@ -327,6 +340,16 @@ pthread_t network_resource_get_thread(struct network_resource *nr)
 char *network_resource_get_ifname(struct network_resource *nr)
 {
     return nr->ifname;
+}
+
+uint32_t network_resource_get_multipath(struct network_resource *nr)
+{
+    return nr->multipath;
+}
+
+uint32_t network_resource_get_available(struct network_resource *nr)
+{
+    return nr->available;
 }
 
 int network_resource_get_table(struct network_resource *nr)
@@ -592,6 +615,8 @@ struct network_resource *mnl_route_to_resource(struct mnl_route *route)
     res->family = route->family;
     res->link_type = lookup_link_type(res);
     res->address = lookup_address(res);
+    res->table = 0;
+    res->direct = 0;
     lookup_name(res, res->ifname);
     return res;
 }
