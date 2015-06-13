@@ -26,8 +26,6 @@ struct condition
     uint32_t condition_id;
     uint8_t condition_met;
     struct policy_definition *parent;
-    condition_cb_t callback;
-    void *cb_data;
 };
 
 static const char * comparators[__COMPARATOR_MAX] = {
@@ -76,8 +74,6 @@ struct condition * condition_alloc(void)
     c->comparator = 0;
     c->condition_id = 0;
     c->parent = (struct policy_definition*)0;
-    c->callback = (condition_cb_t)0;
-    c->cb_data = (void *)0;
     c->condition_met = 0;
 
     return c;
@@ -159,14 +155,4 @@ uint32_t condition_get_comparator(struct condition *c)
 void condition_set_comparator(struct condition *c, uint32_t comparator)
 {
     c->comparator = comparator;
-}
-
-condition_cb_t condition_get_callback(struct condition *c)
-{
-    return c->callback;
-}
-
-void condition_set_callback(struct condition *c, condition_cb_t callback )
-{
-    c->callback = callback;
 }

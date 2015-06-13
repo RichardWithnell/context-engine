@@ -46,6 +46,14 @@ typedef int (*init_condition_t)(register_key_cb_t reg_cb, void *data);
 typedef void (*condition_cb_t)(struct condition *c, void *data);
 typedef struct condition* (*parse_condition_t)(void *key, void *value, void *comparator);
 
+
+struct condition_context
+{
+    condition_cb_t cb;
+    void *data;
+    List *conditions;
+};
+
 void * start(void *context);
 int init_condition(register_key_cb_t reg_cb, void *data);
 struct condition *parse_condition(void *key, void *value, void *comparator);
@@ -73,18 +81,11 @@ void condition_set_unit(struct condition *c, uint32_t unit);
 void condition_set_comparator(struct condition *c, uint32_t comparator);
 uint32_t condition_get_comparator(struct condition *c);
 
-condition_cb_t condition_get_callback(struct condition *c);
-void condition_set_callback(struct condition *c, condition_cb_t callback);
-
 void condition_print(struct condition *c);
 
 int find_comparator_id(char *comp);
 
-struct condition_context
-{
-    condition_cb_t cb;
-    List *conditions;
-};
+
 
 static inline int condition_check_valid_comparator(int array[], int comparator)
 {

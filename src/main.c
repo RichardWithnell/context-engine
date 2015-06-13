@@ -37,6 +37,13 @@ char *libs[] = {"src/conditions/libbattery_policy.so",
                     "src/conditions/libwifi_policy.so",
                     0};
 
+struct condition_cb_data
+{
+    List *netres_list;
+    List *application_specs;
+    List *iptables_rules;
+};
+
 void sig_handler(int signum)
 {
     if (signum == SIGINT) {
@@ -70,12 +77,16 @@ int create_pid(void)
 
 void condition_cb(struct condition *c, void *data)
 {
+    struct condition_cb_data *cb_data = (struct condition_cb_data*)0;
     struct policy_definition *pd = (struct policy_definition*)0;
     struct condition *condition = (struct condition*)0;
     struct action *action = (struct action*)0;
     List *conditions = (List*)0;
     List *actions = (List*)0;
     Litem *item = (Litem*)0;
+
+    cb_data = (struct condition_cb_data*) data;
+
 
     pd = condition_get_parent(c);
 
@@ -121,8 +132,37 @@ void condition_cb(struct condition *c, void *data)
                     link_manager_up(action_get_link_name(action));
             }
         } else if (action_get_mode(action) == ACTION_MODE_SOFT) {
+            Litem *net_res = (Litem*)0;
             print_verb("Performing Soft Action\n");
+            list_for_each(net_res, cb_data->netres_list){
+                struct network_resource *res = (struct network_resource*)0;
+                res = net_res->data;
+                if(strcmp(network_resource_get_ifname(res), action_get_link_name(action))){
+                    uint8_t act = action_get_action(action);
+                    if(act == ACTION_ENABLE){
+                        print_verb("Action: Enable %s\n", action_get_link_name(action));
+                        network_resource_set_available(res, RESOURCE_AVAILABLE);
 
+                    } else if(act == ACTION_DISABLE){
+                        print_verb("Action: Disable %s\n", action_get_link_name(action));
+                        network_resource_set_available(res, RESOURCE_UNAVAILABLE);
+
+                    } else {
+                        print_error("Unhandled action\n");
+                    }
+                }
+            }
+            /*
+            List *netres_list;
+            List *application_specs;
+            List *iptables_rules;
+            */
+
+            route_selector(cb_data->netres_list,
+                cb_data->application_specs,
+                cb_data->iptables_rules);
+
+            /*Recalculate Routes*/
         } else {
             print_error("Unknown action mode\n");
         }
@@ -169,7 +209,7 @@ int main(void)
     /*Define variables for libnl updates*/
     struct cache_monitor mon_data;
     pthread_t monitor_thread;
-
+    struct condition_cb_data ccbd;
     pthread_mutex_t update_lock;
     Queue update_queue;
 
@@ -258,8 +298,11 @@ int main(void)
     pthread_create(&monitor_thread, NULL,
                    (void*)&init_monitor, (void*)&mon_data);
 
+    ccbd.netres_list = netres_list;
+    ccbd.application_specs = application_specs;
+    ccbd.iptables_rules = policy_handler_state_get_rules(ph_state);
 
-    context_library_start(context_libs, condition_cb);
+    context_library_start(context_libs, condition_cb, &ccbd);
 
     while(running) {
         print_verb("Waiting on barrier\n");

@@ -15,7 +15,9 @@ parse_condition_t context_library_get_parser(List *list, char * key);
 struct context_library * context_library_get_for_key(List *list, char * key);
 int context_library_add_condition(List *context_libs, struct condition *cond);
 
-int context_library_start(List *context_libs, condition_cb_t start);
+int context_library_set_condition_cb(struct context_library *cl, condition_cb_t cb, void *data);
+
+int context_library_start(List *context_libs, condition_cb_t cb, void *data);
 
 int context_library_check_loaded(List *list, char *path);
 int context_library_load(struct context_library *ch);

@@ -9,6 +9,9 @@
 
 struct mptcp_state {
     List *connections;
+    List *mp_connections;
+    List *sp_connections;
+    List *migratable_connections;
     void *kernel_comms;
     int running;
     mptcp_control_cb_t event_cb;

@@ -127,16 +127,16 @@ float get_battery_voltage(void)
     return r;
 }
 
-void fire_callback(struct condition *c, condition_cb_t cb)
+void fire_callback(struct condition *c, condition_cb_t cb, void *data)
 {
     if(cb && !condition_get_met(c)){
         //print_verb("Firing callback: %d\n", condition_get_met(c));
         condition_set_met(c, 1);
-        cb(c, 0);
+        cb(c, data);
     }
 }
 
-struct condition * check_voltage_condition(struct condition *c, float voltage, condition_cb_t cb)
+struct condition * check_voltage_condition(struct condition *c, float voltage, condition_cb_t cb, void *data)
 {
     uint32_t comparator = condition_get_comparator(c);
     float *v = condition_get_value(c);
@@ -145,42 +145,42 @@ struct condition * check_voltage_condition(struct condition *c, float voltage, c
         case COMPARATOR_LT:
             //print_debug("Voltage?: %f < %f\n", voltage, *v);
             if(voltage < *v) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
             break;
         case COMPARATOR_GT:
             if(voltage > *v) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
             break;
         case COMPARATOR_GTE:
             if(voltage >= *v) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
             break;
         case COMPARATOR_LTE:
             if(voltage <= *v) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
             break;
         case COMPARATOR_EQUALS:
             if(*v == voltage) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
             break;
         case COMPARATOR_NEQUALS:
             if(*v != voltage) {
-                fire_callback(c, cb);
+                fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
             }
@@ -190,12 +190,12 @@ struct condition * check_voltage_condition(struct condition *c, float voltage, c
     return (struct condition*)0;
 }
 
-struct condition * check_voltage_conditions(List *conditions, float voltage, condition_cb_t cb)
+struct condition * check_voltage_conditions(List *conditions, float voltage, condition_cb_t cb, void *data)
 {
     Litem *item;
     list_for_each(item, conditions){
         struct condition *cond = (struct condition*)item->data;
-        check_voltage_condition(cond, voltage, cb);
+        check_voltage_condition(cond, voltage, cb, data);
     }
     return (struct condition*)0;
 }
@@ -205,8 +205,10 @@ void * start(void *context)
     List *conditions;
     struct condition_context *ctx = context;
     condition_cb_t cb;
+    void *cb_data;
 
     cb = ctx->cb;
+    cb_data = ctx->data;
     conditions = ctx->conditions;
 
     srand48(time(NULL));
@@ -214,7 +216,7 @@ void * start(void *context)
     for(;;) {
         /*Battery Event Loop*/
         float voltage = get_battery_voltage();
-        check_voltage_conditions(conditions, voltage, cb);
+        check_voltage_conditions(conditions, voltage, cb, cb_data);
         sleep(1);
     }
 

@@ -43,13 +43,14 @@ int register_key_cb(char *key, void *data)
     return 0;
 }
 
-int context_library_start(List *context_libs, condition_cb_t cb)
+int context_library_start(List *context_libs, condition_cb_t cb, void *data)
 {
     Litem *item;
     list_for_each(item, context_libs){
         struct context_library *lib = (struct context_library*)item->data;
         struct condition_context *cc = malloc(sizeof(struct condition_context));
         cc->cb = cb;
+        cc->data = data;
         cc->conditions = lib->conditions;
         print_debug("%s: %d\n", lib->path, list_size(lib->conditions));
         pthread_create(&(lib->thread), NULL, lib->start, cc);
@@ -92,13 +93,17 @@ int load_context_libs(List *list, char *libs[])
     return 0;
 }
 
-int context_library_set_condition_cb(struct context_library *cl, condition_cb_t cb)
+int context_library_set_condition_cb(struct context_library *cl, condition_cb_t cb, void *data)
 {
+    /*
     Litem *item;
     list_for_each(item, cl->conditions){
         struct condition *c = (struct condition*)item->data;
-        condition_set_callback(c, cb);
+        condition_set_callback(c, cb, data);
     }
+    return 0;
+    */
+    print_error("NOT IMPLEMENTED.");
     return 0;
 }
 

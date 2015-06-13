@@ -7,12 +7,18 @@ struct policy_handler_state {
     struct mptcp_state *mp_state;
     List *network_resources;
     List *application_specs;
+    List *iptables_rules;
     policy_handler_route_change_cb_t route_change_cb;
     void * route_change_data;
     policy_handler_metric_change_cb_t metric_change_cb;
     void * metric_change_data;
     pthread_t mptcp_thread;
 };
+
+List *policy_handler_state_get_rules(struct policy_handler_state *ph)
+{
+    return ph->iptables_rules;
+}
 
 int policy_handler_create_subflows_for_connection(struct mptcp_state *state, struct connection *conn, List *network_resources){
     Litem *item;
@@ -24,7 +30,7 @@ int policy_handler_create_subflows_for_connection(struct mptcp_state *state, str
         struct network_resource *nr = (struct network_resource *)item->data;
         address = network_resource_get_address(nr);
         loc_id = network_resource_get_index(nr);
-        if( network_resource_get_available(nr) == RESOURCE_AVAILABILE
+        if( network_resource_get_available(nr) == RESOURCE_AVAILABLE
           && network_resource_get_multipath(nr) == RULE_MULTIPATH_ENABLED
           && address != conn->saddr){
             ret = mptcp_create_subflow(state, address, loc_id, conn);
@@ -42,14 +48,11 @@ int policy_handler_create_subflows_for_connection(struct mptcp_state *state, str
 
 int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct connection *conn, List *network_resources)
 {
-
-
     conn->subflows = malloc(sizeof(List));
     list_init(conn->subflows);
     mptcp_state_lock(mp_state);
     mptcp_state_put_connection(mp_state, conn);
     mptcp_state_unlock(mp_state);
-
 
     if(conn->multipath == RULE_MULTIPATH_ENABLED){
         policy_handler_create_subflows_for_connection(mp_state, conn, network_resources);
@@ -109,7 +112,7 @@ int policy_handler_add_route_cb(struct network_resource *nr, struct policy_handl
         return -1;
     }
 
-    if(network_resource_get_available(nr) != RESOURCE_AVAILABILE){
+    if(network_resource_get_available(nr) != RESOURCE_AVAILABLE){
         print_debug("Not using resource, soft set to unavailable\n");
         return -1;
     }
@@ -179,8 +182,11 @@ void * policy_handler_route_change_cb(struct network_resource *nr, uint8_t mode,
     return (void*)0;
 }
 
-void * policy_handler_metric_change_cb(struct network_resource *nr, uint8_t mode, void* data)
+void * policy_handler_metric_change_cb(struct policy_handler_state *ph_state, void* data)
 {
+    route_selector(ph_state->network_resources,
+        ph_state->application_specs,
+        ph_state->iptables_rules);
 
     return 0;
 }
@@ -209,6 +215,8 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
     } else {
         print_error("Host is not MP-Capable\n");
     }
+
+    init_iptables_context();
 
     return ph_state;
 }
@@ -240,5 +248,7 @@ struct policy_handler_state * policy_handler_state_alloc(void)
 {
     struct policy_handler_state *ph;
     ph = malloc(sizeof(struct policy_handler_state));
+    ph->iptables_rules = malloc(sizeof(List));
+    list_init(ph->iptables_rules);
     return ph;
 }

@@ -122,7 +122,7 @@ double metric_comparison(
     return 0;
 }
 
-int create_iptables_string(struct network_resource *nr, struct application_spec *as, int mode, char *string)
+int create_iptables_string(struct iptables_mark_rule *rule, int mode, char *string)
 {
     char protocol[4];
     char mod_char = 0;
@@ -149,7 +149,7 @@ int create_iptables_string(struct network_resource *nr, struct application_spec 
     }
 
     memset(protocol, 0, 4);
-    switch(application_spec_get_proto(as)){
+    switch(iptables_mark_rule_get_protocol(rule)){
         case TCP:
             strncpy(protocol, "TCP", 3);
             break;
@@ -176,26 +176,39 @@ int create_iptables_string(struct network_resource *nr, struct application_spec 
 
     sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -p %s", mod_char, protocol);
 
-    if(application_spec_get_dport(as)){
-        sprintf(tmp, " --dport %d", application_spec_get_dport(as));
+    if(iptables_mark_rule_get_dport(rule)){
+        sprintf(tmp, " --dport %d", iptables_mark_rule_get_dport(rule));
         strcat(string_builder, tmp);
     }
 
-    if(application_spec_get_daddr(as)){
-        sprintf(tmp, " --daddr %s", ip_to_str(htonl(application_spec_get_daddr(as))));
+    if(iptables_mark_rule_get_daddr(rule)){
+        sprintf(tmp, " --daddr %s", ip_to_str(htonl(iptables_mark_rule_get_daddr(rule))));
         strcat(string_builder, tmp);
     }
 
     strcat(string_builder, " -m conntrack --ctstate NEW -t mangle");
 
     if(mode == ADD_RULE || mode == INSERT_RULE){
-        sprintf(tmp, "-j MARK --set-mark %d", network_resource_get_table(nr));
+        sprintf(tmp, "-j MARK --set-mark %d", iptables_mark_rule_get_mark(rule));
         strcat(string_builder, tmp);
     }
 
     strcpy(string, string_builder);
+
+    print_verb("Created iptables command: %s\n", string);
+
     free(tmp);
     free(string_builder);
+    return 0;
+}
+
+int create_and_run_iptables(struct iptables_mark_rule *rule, int mode)
+{
+    char *string = (char*)0;
+    string = malloc(sizeof(char)*512);
+    create_iptables_string(rule, mode, string);
+    iptables_run(string);
+    free(string);
     return 0;
 }
 
@@ -219,8 +232,17 @@ int install_iptables_rule(struct network_resource *nr, struct application_spec *
         r = (struct iptables_mark_rule*)rule_item->data;
         if(!iptables_mark_rule_cmp(rule, r)){
             /*Rules Match*/
+            create_and_run_iptables(r, DELETE_RULE);
+            create_and_run_iptables(rule, INSERT_RULE);
+            rule_item->data = rule;
+            free(r);
+            return 0;
         }
     }
+
+    rule_item = malloc(sizeof(Litem));
+    rule_item->data = rule;
+    list_put(iptables_rules, rule_item);
 
     return 0;
 }
