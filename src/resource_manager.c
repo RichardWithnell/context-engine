@@ -25,10 +25,62 @@
 #include "util.h"
 #include "path_metrics/path_metric_interface.h"
 
-#define PROBE_FREQUENCY 300
+#define PROBE_FREQUENCY 60
 
 #define MPDD_RESOURCE_INTERFACE_PATH_DIRECT "/tmp/mpdd/direct/"
 #define MPDD_RESOURCE_INTERFACE_PATH_INDIRECT "/tmp/mpdd/indirect/"
+
+static uint32_t index_bits = 0;
+static pthread_mutex_t index_bits_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static inline int ffsll (long long int i)
+{
+    unsigned long long int x = i & -i;
+    if (x <= 0xffffffff) return ffs (i);
+    else return 32 + ffs (i >> 32);
+}
+
+static inline int find_next_bit(long long int b, int base)
+{
+    if(base >= sizeof(b) * 8) return -1;
+    else return ffsll(b >> base << base);
+}
+
+/* Iterates over all bit set to 1 in a bitset */
+#define for_each_bit_set(b, i)	\
+    for (i = ffsll(b) - 1; i >= 0; i = find_next_bit(b, i + 1) - 1)
+
+#define for_each_bit_unset(b, i)	\
+    for_each_bit_set(~b, i)
+
+static inline int __find_free_index(uint64_t bitfield, uint8_t base)
+{
+	int i;
+	base = (base >= 64) ? 1 : base;
+	for_each_bit_unset(bitfield >> base, i) {
+		/* We wrapped at the bitfield - try from 0 on */
+		if (i + base >= sizeof(bitfield) * 8) {
+			for_each_bit_unset(bitfield >> (base > 0) ? 1 : 0, i) {
+				if (i >= sizeof(bitfield) * 8){
+					return -1;
+				}
+				return i;
+			}
+			return -1;
+		}
+		if (i + base >= sizeof(bitfield) * 8){
+			break;
+		}
+
+		return i + base;
+	}
+	return -1;
+}
+
+static inline int find_free_index(uint64_t bitfield)
+{
+	return __find_free_index(bitfield, 0);
+}
 
 struct network_resource
 {
@@ -40,7 +92,7 @@ struct network_resource
     uint32_t prio;
     uint32_t family;
     uint32_t link_type;
-    uint64_t loc_id;
+    uint32_t loc_id;
     char ifname[IFNAMSIZ];
     uint32_t multipath;
     uint32_t available;
@@ -155,14 +207,16 @@ void * network_resource_thread_start(void *data)
     while(network_resource_is_running(nr)){
         if(network_resource_complete(nr)){
             struct path_stats *ps = metric_clone(nr->state);
+            double diff = 0.00;
             metric_update(nr->state, endpoint, local);
-            if(metric_cmp(ps, nr->state)){
+            diff = metric_cmp(ps, nr->state);
+            free(ps);
+            if(diff != 0.00){
+                print_verb("Metric difference: %f\n", diff);
                 /*Fire Metric Change Callback*/
-                /*
-                if(nr->availability_cb){
-                    nr->availability_cb(nr, nr->availability_data);
-                }
-                */
+                nr->availability_cb(nr, nr->availability_data);
+            } else {
+                print_debug("Metrics too similar, don't bother recalculating routes\n");
             }
             print_path_stats(nr->state, nr->ifname);
         } else {
@@ -206,8 +260,9 @@ int network_resource_cmp(struct network_resource *nr1, struct network_resource *
     return 0;
 }
 
-struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt)
+struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt, resource_availability_cb_t cb, void *data)
 {
+    int i = 0;
     Litem *item;
     struct network_resource *net_res;
 
@@ -219,18 +274,34 @@ struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl
 
     net_res = mnl_route_to_resource(rt);
 
+    if(!net_res){
+        print_error("Failed to convert new link update into a network resource\n");
+        return (struct network_resource *)0;
+    }
+    pthread_mutex_lock(&index_bits_lock);
+    i = find_free_index(index_bits);
+    if(i < 0) {
+        print_error("No space for new loc_id\n");
+        return (struct network_resource*)0;
+    }
+
+    /*Turn On bit*/
+    index_bits |= (1LLU << i);
+    pthread_mutex_unlock(&index_bits_lock);
 
     net_res->table = read_mpdd_file_table(net_res->address, &(net_res->direct));
+    net_res->availability_cb = cb;
+    net_res->availability_data = data;
 
     print_verb("Set Table: %d\n", net_res->table);
     print_verb("Set Resource Loc: %d\n", net_res->direct);
 
     item = malloc(sizeof(Litem));
-    if(!item){
+    if(!item) {
         print_verb("malloc failed\n");
-
         return (struct network_resource *)0;
     }
+
     item->data = net_res;
     list_put(nr_list, item);
     print_verb("network_resource added to list\n");
@@ -247,6 +318,11 @@ struct network_resource * network_resource_delete_from_list(List *nr_list, struc
     list_for_each(item, nr_list){
         struct network_resource *nr = item->data;
         if(!network_resource_cmp(net_res, nr)){
+
+            print_verb("Free up path index\n");
+            pthread_mutex_lock(&index_bits_lock);
+            index_bits &= ~(1LLU << net_res->loc_id);
+            pthread_mutex_unlock(&index_bits_lock);
             list_remove(nr_list, idx);
             free(item);
             print_verb("Deleted network_resource from list\n");
@@ -307,6 +383,11 @@ void network_resource_set_availability_cb(
 void network_resource_free(struct network_resource *nr)
 {
     free(nr);
+}
+
+uint32_t network_resource_get_loc_id(struct network_resource *nr)
+{
+    return nr->loc_id;
 }
 
 void network_resource_set_multipath(struct network_resource *nr, uint32_t mp)

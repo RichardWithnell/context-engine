@@ -37,7 +37,7 @@ struct subflow * mptcp_connection_remove_subflow(struct connection *conn, uint32
     return (struct subflow*)0;
 }
 
-void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uint32_t loc_id)
+void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uint32_t loc_id, void* data)
 {
     struct subflow *s;
     Litem *item;
@@ -45,6 +45,7 @@ void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uin
     s = malloc(sizeof(struct subflow));
     s->saddr = address;
     s->loc_id = loc_id;
+    s->resource = data;
     item = malloc(sizeof(Litem));
     item->data = s;
     list_put(conn->subflows, item);

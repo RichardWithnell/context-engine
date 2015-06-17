@@ -20,11 +20,9 @@ int populate_path_stats(struct path_stats *ps, char *server, char *local)
 {
     if(get_abing_bandwidth(server, local, ps)){
         print_error("Failed to get bandwidth\n");
-        return -1;
     }
     if(get_ping_stats(server, local, ps)){
         print_error("Failed to get ping stats\n");
-        return -1;
     }
     return 0;
 }
@@ -77,6 +75,8 @@ int get_ping_stats(char *host, char *bind, struct path_stats *stats)
     FILE* output;
     char line[256];
     int status;
+
+    print_debug("Get Ping Stats\n");
 
     pipe(pipefd); //create a pipe
     pid = fork(); //span a child process

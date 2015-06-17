@@ -27,7 +27,6 @@ struct network_resource_callback_data {
     List *link_profiles;
 };
 
-
 enum {
     UNKNOWN_RESOURCE,
     DIRECT_RESOURCE,
@@ -56,6 +55,7 @@ enum {
     RESOURCE_AVAILABILITY_UNPSEC,
     RESOURCE_AVAILABLE,
     RESOURCE_UNAVAILABLE,
+    RESOURCE_BACKUP,
     __RESOURCE_AVAILABILITY_MAX
 };
 
@@ -69,7 +69,7 @@ struct network_resource *mnl_route_to_resource(struct mnl_route *route);
 void network_resource_list_put_cb(List *l, Litem *item, void *data);
 void network_resource_list_rem_cb(List *l, Litem *item, void *data);
 
-struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt);
+struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl_route *rt, resource_availability_cb_t cb, void *data);
 struct network_resource * network_resource_delete_from_list(List *nr_list, struct mnl_route *rt);
 
 struct network_resource * network_resource_alloc(void);
@@ -88,6 +88,7 @@ int network_resource_get_family(struct network_resource *nr);
 int network_resource_get_link_type(struct network_resource *nr);
 uint32_t network_resource_get_multipath(struct network_resource *nr);
 uint32_t network_resource_get_available(struct network_resource *nr);
+uint32_t network_resource_get_loc_id(struct network_resource *nr);
 
 struct path_stats * network_resource_get_state(struct network_resource *nr);
 

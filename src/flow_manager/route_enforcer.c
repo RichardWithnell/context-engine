@@ -4,7 +4,6 @@
 
 #include "../list.h"
 #include "route_enforcer.h"
-#include "../application_rules.h"
 #include "../resource_manager.h"
 #include "../iptables/iptables.h"
 #include "../path_metrics/path_metric_interface.h"
@@ -174,7 +173,7 @@ int create_iptables_string(struct iptables_mark_rule *rule, int mode, char *stri
     "iptables -I CONTEXT 3 -m mark --mark 0 -p tcp --dport 80 -m conntrack --ctstate NEW -t mangle -j MARK --set-mark 4"
     */
 
-    sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -p %s", mod_char, protocol);
+    sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -s 0.0.0.0 -p %s", mod_char, protocol);
 
     if(iptables_mark_rule_get_dport(rule)){
         sprintf(tmp, " --dport %d", iptables_mark_rule_get_dport(rule));
@@ -247,9 +246,49 @@ int install_iptables_rule(struct network_resource *nr, struct application_spec *
     return 0;
 }
 
-int route_selector(List * resource_list, List * app_specs, List * iptables_rules)
+struct network_resource * route_selector_resource_loop(
+  List *resource_list,
+  struct application_spec *spec,
+  int try_backup)
 {
     Litem *resource_item;
+    struct network_resource *candidate = (struct network_resource *)0;
+
+    list_for_each(resource_item, resource_list){
+        struct network_resource *nr = (struct network_resource*)0;
+        nr = (struct network_resource*)resource_item->data;
+        if(network_resource_get_available(nr) == RESOURCE_UNAVAILABLE){
+            continue;
+        }
+        if(network_resource_get_available(nr) == RESOURCE_BACKUP && try_backup == 0){
+            continue;
+        }
+        if(!candidate){
+            candidate = nr;
+        } else {
+            int res = 0;
+            res = metric_comparison(spec, nr, candidate);
+            if(res == 1) {
+                candidate = nr;
+            } else if(res == 2) {
+                candidate = candidate;
+            } else {
+                int choose = rand() % 100;
+                print_verb("Links are equal, choose randomly\n");
+                if(choose <= 50) {
+                    candidate = nr;
+                } else {
+                    candidate = candidate;
+                }
+            }
+        }
+    }
+
+    return candidate;
+}
+
+int route_selector(List * resource_list, List * app_specs, List * iptables_rules)
+{
     Litem *app_spec_item;
 
     struct network_resource *candidate = (struct network_resource *)0;
@@ -258,31 +297,29 @@ int route_selector(List * resource_list, List * app_specs, List * iptables_rules
         struct application_spec *spec = (struct application_spec*)0;
         spec = (struct application_spec*)app_spec_item->data;
 
-        list_for_each(resource_item, resource_list){
-            struct network_resource *nr = (struct network_resource*)0;
-            nr = (struct network_resource*)resource_item->data;
-            if(!candidate){
-                candidate = nr;
-            } else {
-                int res = 0;
-                res = metric_comparison(spec, nr, candidate);
-                if(res == 1) {
-                    candidate = nr;
-                } else if(res == 2) {
-                    candidate = candidate;
-                } else {
-                    int choose = rand() % 100;
-                    if(choose <= 50) {
-                        candidate = nr;
-                    } else {
-                        candidate = candidate;
-                    }
-                }
-            }
+        if(!spec){
+            print_error("Application Spec is null\n");
+            continue;
         }
 
-        install_iptables_rule(candidate, spec, iptables_rules);
-    }
+        candidate = route_selector_resource_loop(resource_list, spec, 0);
+        if(!candidate) {
+            route_selector_resource_loop(resource_list, spec, 1);
+        }
 
+        if(candidate){
+            print_log("Chosen Link %s (%zu)\n",
+                network_resource_get_ifname(candidate),
+                htonl(network_resource_get_address(candidate)));
+
+            print_log("\tfor App Spec: %zu:%d\n",
+                htonl(application_spec_get_daddr(spec)),
+                application_spec_get_dport(spec));
+
+            install_iptables_rule(candidate, spec, iptables_rules);
+        } else {
+            print_error("No links are available for connection\n");
+        }
+    }
     return 0;
 }

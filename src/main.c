@@ -77,16 +77,22 @@ int create_pid(void)
 
 void condition_cb(struct condition *c, void *data)
 {
-    struct condition_cb_data *cb_data = (struct condition_cb_data*)0;
+    struct policy_handler_state *ph_state = (struct policy_handler_state*)0;
     struct policy_definition *pd = (struct policy_definition*)0;
     struct condition *condition = (struct condition*)0;
     struct action *action = (struct action*)0;
     List *conditions = (List*)0;
     List *actions = (List*)0;
+    List *netres_list = (List*)0;
+    List *application_specs = (List*)0;
+    List *iptables_rules = (List*)0;
     Litem *item = (Litem*)0;
 
-    cb_data = (struct condition_cb_data*) data;
+    ph_state = ( struct policy_handler_state*) data;
 
+    netres_list = policy_handler_state_get_resources(ph_state);
+    iptables_rules = policy_handler_state_get_rules(ph_state);
+    application_specs = policy_handler_state_get_resources(ph_state);
 
     pd = condition_get_parent(c);
 
@@ -114,18 +120,19 @@ void condition_cb(struct condition *c, void *data)
             return;
         }
         if(!condition_get_met(condition)){
-            print_verb("Condition [%s] not met yet, wait\n", condition_get_key(condition));
+            print_verb("Condition [%s] not met yet, wait\n",
+                condition_get_key(condition));
             return;
         }
     }
     print_verb("All Conditions Met\n");
     /*All conditions Met*/
 
-    list_for_each(item, actions){
+    list_for_each(item, actions) {
         action = (struct action*)item->data;
         if(action_get_mode(action) == ACTION_MODE_HARD){
             print_verb("Performing Hard Action\n");
-            switch(action_get_action(action)){
+            switch(action_get_action(action)) {
                 case ACTION_DISABLE:
                     link_manager_down(action_get_link_name(action));
                 case ACTION_ENABLE:
@@ -134,33 +141,38 @@ void condition_cb(struct condition *c, void *data)
         } else if (action_get_mode(action) == ACTION_MODE_SOFT) {
             Litem *net_res = (Litem*)0;
             print_verb("Performing Soft Action\n");
-            list_for_each(net_res, cb_data->netres_list){
+            list_for_each(net_res, netres_list){
                 struct network_resource *res = (struct network_resource*)0;
                 res = net_res->data;
-                if(strcmp(network_resource_get_ifname(res), action_get_link_name(action))){
+                if(strcmp(network_resource_get_ifname(res),
+                            action_get_link_name(action)))
+                {
                     uint8_t act = action_get_action(action);
                     if(act == ACTION_ENABLE){
-                        print_verb("Action: Enable %s\n", action_get_link_name(action));
-                        network_resource_set_available(res, RESOURCE_AVAILABLE);
+                        print_verb("Action: Enable %s\n",
+                            action_get_link_name(action));
+                        network_resource_set_available(res,
+                            RESOURCE_AVAILABLE);
 
+                        /*Add Subflows*/
+                        policy_handler_add_route_cb(res, ph_state);
                     } else if(act == ACTION_DISABLE){
-                        print_verb("Action: Disable %s\n", action_get_link_name(action));
-                        network_resource_set_available(res, RESOURCE_UNAVAILABLE);
+                        print_verb("Action: Disable %s\n",
+                            action_get_link_name(action));
+                        network_resource_set_available(res,
+                            RESOURCE_UNAVAILABLE);
 
+                        /*Remove Subflows*/
+                        policy_handler_del_route_cb(res, ph_state);
                     } else {
                         print_error("Unhandled action\n");
                     }
                 }
             }
-            /*
-            List *netres_list;
-            List *application_specs;
-            List *iptables_rules;
-            */
 
-            route_selector(cb_data->netres_list,
-                cb_data->application_specs,
-                cb_data->iptables_rules);
+            route_selector(netres_list,
+                application_specs,
+                iptables_rules);
 
             /*Recalculate Routes*/
         } else {
@@ -196,10 +208,25 @@ void resource_up(struct network_resource *nr, struct policy_handler_state *ph)
     return (void)0;
 }
 
-void metric_change_cb(List *network_resources, void *data)
+void * metric_change_cb(struct network_resource *resource, void *data)
 {
+    struct condition_cb_data *ccbd;
+
+    List *iptables_rules = (List*)0;
+    List *application_specs = (List*)0;
+    List *network_resources = (List*)0;
+
+    ccbd = (struct condition_cb_data*)data;
+
+    network_resources = ccbd->netres_list;
+    application_specs = ccbd->application_specs;
+    iptables_rules = ccbd->iptables_rules;
+
+    route_selector(network_resources, application_specs, iptables_rules);
+
     print_debug("Metric change callback\n");
-    return;
+
+    return (void*)0;
 }
 
 int main(void)
@@ -227,14 +254,18 @@ int main(void)
     list_init(netres_list);
     list_init(context_libs);
 
-    print_debug("Measurement Endpoint Len: %zd\n", strlen(MEASUREMENT_ENDPOINT));
-    measurement_endpoint = malloc(sizeof(char)*(strlen(MEASUREMENT_ENDPOINT)+1));
+    print_debug("Measurement Endpoint Len: %zd\n",
+        strlen(MEASUREMENT_ENDPOINT));
+
+    measurement_endpoint =
+        malloc(sizeof(char)*(strlen(MEASUREMENT_ENDPOINT)+1));
+
     strcpy(measurement_endpoint, MEASUREMENT_ENDPOINT);
     measurement_endpoint[strlen(MEASUREMENT_ENDPOINT)] = 0;
     print_debug("Measurement Endpoint Set: %s\n", measurement_endpoint);
 
     link_profiles = load_link_profiles("./example/link.cfg\0");
-    if(!link_profiles){
+    if(!link_profiles) {
         print_error("Failed to load policy file: %s\n", "./example/link.cfg");
         return -1;
     }
@@ -258,7 +289,8 @@ int main(void)
 
     application_specs = load_application_specs("./example/application.cfg\0");
     if(!application_specs){
-        print_error("Failed to load application config file: %s\n", "./example/application.cfg");
+        print_error("Failed to load application config file: %s\n",
+            "./example/application.cfg");
         return -1;
     }
 
@@ -325,14 +357,20 @@ int main(void)
             if(u->type == UPDATE_ROUTE) {
                 struct network_resource *nr = (struct network_resource *)0;
                 if(u->action == ADD_RT) {
-                    nr = network_resource_add_to_list(netres_list, (struct mnl_route*)u->update);
+                    nr = network_resource_add_to_list(netres_list,
+                            (struct mnl_route*)u->update,
+                            metric_change_cb,
+                            &ccbd);
+
                     if(nr){
                         resource_up(nr, ph_state);
                     } else {
                         print_error("Failed to create resource\n");
                     }
+
                 } else if(u->action == DEL_RT) {
-                    nr = network_resource_delete_from_list(netres_list, (struct mnl_route*)u->update);
+                    nr = network_resource_delete_from_list(netres_list,
+                            (struct mnl_route*)u->update);
                     if(nr){
                         resource_down(nr, ph_state);
                         network_resource_free(nr);

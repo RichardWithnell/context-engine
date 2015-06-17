@@ -1,5 +1,9 @@
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <fcntl.h>
 
 #include "../policy.h"
 
@@ -121,11 +125,41 @@ int init_condition(register_key_cb_t reg_cb, void *data)
     return 0;
 }
 
+float read_voltage_file(void)
+{
+    int fd;
+    char line[512];
+    ssize_t n;
+    char * battery_voltage_file = "/tmp/battery_voltage";
+
+    memset(line, 0, 512);
+    fd = open(battery_voltage_file, O_RDONLY);
+    if (fd == -1){
+         print_error("Failed to open battery voltage file\n");
+         return 5.00;
+    }
+
+    n = read(fd, line, 512);
+    if (n == -1){
+        print_error("Failed to read from battery voltage file\n");
+        return 5.00;
+    }
+
+    return atof(line);
+}
+
+float get_battery_voltage(void)
+{
+    return read_voltage_file();
+}
+
+/*
 float get_battery_voltage(void)
 {
     float r = drand48() + 3.30f;
     return r;
 }
+*/
 
 void fire_callback(struct condition *c, condition_cb_t cb, void *data)
 {

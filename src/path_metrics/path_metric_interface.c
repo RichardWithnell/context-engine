@@ -19,9 +19,9 @@ void print_path_stats(struct path_stats *stats, char *id)
         id, stats->bandwidth, stats->delay, stats->loss, stats->jitter);
 }
 
-int metric_cmp(struct path_stats *ps1, struct path_stats *ps2)
+double metric_cmp(struct path_stats *ps1, struct path_stats *ps2)
 {
-    int diff = 0;
+    double diff = 0;
 
     if(ps1->delay != ps2->delay){
         diff += fdim(ps1->delay, ps2->delay) / fmax(ps1->delay, ps2->delay);
@@ -45,6 +45,8 @@ int metric_cmp(struct path_stats *ps1, struct path_stats *ps2)
 
 int metric_update(struct path_stats *s, char *server, char *local)
 {
+    print_debug("Update Metrics\n");
+
     if(!s){
         print_error("Couldnt update metric, path_stats null\n");
         return -1;

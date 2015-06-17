@@ -1,6 +1,10 @@
 #include <regex.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <fcntl.h>
 
 #include "../policy.h"
 #include "../debug.h"
@@ -175,12 +179,123 @@ int init_condition(register_key_cb_t reg_cb, void *data)
     return 0;
 }
 
+uint32_t read_bandwidth_file(void)
+{
+    int fd;
+    char line[512];
+    ssize_t n;
+    char * battery_voltage_file = "/tmp/bandwidth_consumption";
+
+    memset(line, 0, 512);
+    fd = open(battery_voltage_file, O_RDONLY);
+    if (fd == -1){
+         print_error("Failed to open bandwidth_consumption file\n");
+         return 5.00;
+    }
+
+    n = read(fd, line, 512);
+    if (n == -1){
+        print_error("Failed to read from bandwidth_consumption file\n");
+        return 5.00;
+    }
+
+    return atoi(line);
+}
+
+uint32_t get_bandwidth_consumption(void)
+{
+    return read_bandwidth_file();
+}
+
+void fire_callback(struct condition *c, condition_cb_t cb, void *data)
+{
+    if(cb && !condition_get_met(c)){
+        //print_verb("Firing callback: %d\n", condition_get_met(c));
+        condition_set_met(c, 1);
+        cb(c, data);
+    }
+}
+
+
+struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandwidth, condition_cb_t cb, void *data)
+{
+    uint32_t comparator = condition_get_comparator(c);
+    uint32_t *b = condition_get_value(c);
+
+    switch(comparator){
+        case COMPARATOR_LT:
+            //print_debug("Voltage?: %f < %f\n", voltage, *v);
+            if(bandwidth < *b) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_GT:
+            if(bandwidth > *b) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_GTE:
+            if(bandwidth >= *b) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_LTE:
+            if(bandwidth <= *b) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_EQUALS:
+            if(*b == bandwidth) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_NEQUALS:
+            if(*b != bandwidth) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+    }
+
+    return (struct condition*)0;
+}
+
+struct condition * check_bandwidth_conditions(List *conditions, uint32_t bandwidth, condition_cb_t cb, void *data)
+{
+    Litem *item;
+    list_for_each(item, conditions){
+        struct condition *cond = (struct condition*)item->data;
+        check_bandwidth_condition(cond, bandwidth, cb, data);
+    }
+    return (struct condition*)0;
+}
+
 void * start(void *context)
 {
-//    struct condition_context *ctx = context;
+    List *conditions;
+    struct condition_context *ctx = context;
+    condition_cb_t cb;
+    void *cb_data;
+
+    cb = ctx->cb;
+    cb_data = ctx->data;
+    conditions = ctx->conditions;
 
     for(;;) {
-        /*Bandwidth Event Loop*/
+        /*Battery Event Loop*/
+        uint32_t bw = get_bandwidth_consumption();
+        check_bandwidth_conditions(conditions, bw, cb, cb_data);
         sleep(1);
     }
 

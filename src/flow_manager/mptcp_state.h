@@ -16,13 +16,16 @@ struct connection {
     uint16_t dport;
     uint8_t transport;
     uint8_t multipath;
+    uint8_t active;
     uint32_t loc_id;
     List *subflows;
+    void *resource;
 };
 
 struct subflow {
     uint32_t saddr;
     uint32_t loc_id;
+    void *resource;
 };
 
 typedef enum {
@@ -39,7 +42,7 @@ typedef void * (*mptcp_control_cb_t)(struct mptcp_state *state, struct connectio
 
 int mptcp_check_local_capability(void);
 
-void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uint32_t loc_id);
+void mptcp_connection_add_subflow(struct connection *conn, uint32_t address, uint32_t loc_id, void *data);
 
 void mptcp_for_each_connection(struct mptcp_state *mp_state, connection_mod_cb_t cb, void *data);
 

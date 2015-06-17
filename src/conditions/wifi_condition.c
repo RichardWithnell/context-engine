@@ -1,6 +1,10 @@
 #include <regex.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <pthread.h>
+#include <fcntl.h>
 
 #include "../policy.h"
 #include "../debug.h"
@@ -203,6 +207,53 @@ struct condition *parse_condition(void *k, void *v, void *c)
     return (struct condition*)0;
 }
 
+char * read_ssid_file(char * linkname)
+{
+    int fd;
+    char file[512];
+    ssize_t n;
+
+    char *ssid = (char*)0;
+
+    ssid = malloc(128);
+
+    memset(ssid, 0, 128);
+    memset(file, 0, 512);
+
+
+    sprintf(file, "/tmp/ssid_%s", linkname);
+
+    fd = open(file, O_RDONLY);
+    if (fd == -1){
+         print_error("Failed to open ssid file\n");
+         free(ssid);
+         return (char*)0;
+    }
+
+    n = read(fd, ssid, 128);
+    if (n == -1){
+        print_error("Failed to read from ssid file\n");
+        free(ssid);
+        return (char*)0;
+    }
+
+    return ssid;
+}
+
+char* get_ssid(char *linkname)
+{
+    return read_ssid_file(linkname);
+}
+
+void fire_callback(struct condition *c, condition_cb_t cb, void *data)
+{
+    if(cb && !condition_get_met(c)){
+        //print_verb("Firing callback: %d\n", condition_get_met(c));
+        condition_set_met(c, 1);
+        cb(c, data);
+    }
+}
+
 int init_wifi_ssid_condition(void)
 {
     return 0;
@@ -231,12 +282,59 @@ int init_condition(register_key_cb_t reg_cb, void *data)
     return 0;
 }
 
+struct condition * check_ssid_condition(struct condition *c, char *ssid, condition_cb_t cb, void *data)
+{
+    uint32_t comparator = condition_get_comparator(c);
+    char * s = condition_get_value(c);
+
+    switch(comparator){
+        case COMPARATOR_EQUALS:
+            if(!strcmp(s, ssid)) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+        case COMPARATOR_NEQUALS:
+            if(strcmp(s, ssid)) {
+                fire_callback(c, cb, data);
+            } else if(condition_get_met(c)){
+                condition_set_met(c, 0);
+            }
+            break;
+    }
+
+    return (struct condition*)0;
+}
+
+struct condition * check_ssid_conditions(List *conditions, condition_cb_t cb, void *data)
+{
+    Litem *item;
+    list_for_each(item, conditions){
+        struct condition *cond = (struct condition*)item->data;
+        char *ssid = get_ssid(condition_get_link_name(cond));
+        if(ssid){
+            check_ssid_condition(cond, ssid, cb, data);
+            free(ssid);
+        }
+    }
+    return (struct condition*)0;
+}
+
 void * start(void *context)
 {
-//    struct condition_context *ctx = context;
+    List *conditions;
+    struct condition_context *ctx = context;
+    condition_cb_t cb;
+    void *cb_data;
+
+    cb = ctx->cb;
+    cb_data = ctx->data;
+    conditions = ctx->conditions;
 
     for(;;) {
-        /*Bandwidth Event Loop*/
+        /*Battery Event Loop*/
+        check_ssid_conditions(conditions, cb, cb_data);
         sleep(1);
     }
 

@@ -91,6 +91,8 @@ int get_ping_stats(char *host, char *bind, struct path_stats *stats)
 
     //listen to what tail writes to its standard output
     while(fgets(line, sizeof(line), output)) {
+        
+
         if(strstr(line, "error")){
             print_error("ping failed\n");
             metric_set_jitter(stats, -1.00);
