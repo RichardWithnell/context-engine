@@ -136,7 +136,7 @@ struct condition *parse_allowance_condition(void *k, void *v, void *c)
         case UNIT_MBITS:
             int_val *= 1048576;
             break;
-        case UNIT GBITS:
+        case UNIT_GBITS:
             int_val *= 1073741824;
             break;
     }
