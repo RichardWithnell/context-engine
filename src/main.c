@@ -26,6 +26,10 @@
 
 #define CONTEXT_MANAGER_PID "/var/run/context_manager.pid"
 
+#define LINK_CONFIG "./config/link.cfg\0"
+#define POLICY_CONFIG "./config/policy.cfg\0"
+#define APPLICATION_CONFIG "./config/application.cfg\0"
+
 #define MEASUREMENT_ENDPOINT "zoostorm-lab.noip.me\0"
 
 int running = 1;
@@ -269,9 +273,9 @@ int main(void)
     measurement_endpoint[strlen(MEASUREMENT_ENDPOINT)] = 0;
     print_debug("Measurement Endpoint Set: %s\n", measurement_endpoint);
 
-    link_profiles = load_link_profiles("./example/link.cfg\0");
+    link_profiles = load_link_profiles(LINK_CONFIG);
     if(!link_profiles) {
-        print_error("Failed to load policy file: %s\n", "./example/link.cfg");
+        print_error("Failed to load policy file: %s\n", LINK_CONFIG);
         return -1;
     }
 
@@ -286,16 +290,16 @@ int main(void)
         (void*)&nr_cb_data);
 
     load_context_libs(context_libs, libs);
-    policy_list = load_policy_file("./example/policy.cfg\0", context_libs);
+    policy_list = load_policy_file(POLICY_CONFIG, context_libs);
     if(!policy_list){
-        print_error("Failed to load policy file: %s\n", "./example/policy.cfg");
+        print_error("Failed to load policy file: %s\n", POLICY_CONFIG);
         return -1;
     }
 
-    application_specs = load_application_specs("./example/application.cfg\0");
+    application_specs = load_application_specs(APPLICATION_CONFIG);
     if(!application_specs){
         print_error("Failed to load application config file: %s\n",
-            "./example/application.cfg");
+            APPLICATION_CONFIG);
         return -1;
     }
 
