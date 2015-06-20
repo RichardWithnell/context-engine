@@ -74,6 +74,7 @@ struct condition *parse_ssid_condition(void *k, void *v, void *c)
     condition_set_unit(cond, UNIT_UNSPEC);
     condition_set_key(cond, (char*)k);
 
+
     return cond;
 }
 
@@ -125,6 +126,20 @@ struct condition *parse_allowance_condition(void *k, void *v, void *c)
     int_val = get_bandwidth(value);
     unit_string = get_bandwidth_unit(value);
     units = find_unit_id(unit_string);
+
+    switch(units){
+        case UNIT_BITS:
+            break;
+        case UNIT_KBITS:
+            int_val *= 1024;
+            break;
+        case UNIT_MBITS:
+            int_val *= 1048576;
+            break;
+        case UNIT GBITS:
+            int_val *= 1073741824;
+            break;
+    }
 
     condition_copy_value(cond, &int_val, sizeof(int_val));
     condition_set_unit(cond, units);
@@ -211,7 +226,7 @@ uint32_t get_bandwidth_consumption(void)
 void fire_callback(struct condition *c, condition_cb_t cb, void *data)
 {
     if(cb && !condition_get_met(c)){
-        print_verb("Firing callback: %d\n", condition_get_met(c));
+        //print_verb("Firing callback: %d\n", condition_get_met(c));
         condition_set_met(c, 1);
         cb(c, data);
     }
@@ -223,7 +238,6 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
     uint32_t comparator = condition_get_comparator(c);
     uint32_t *b = condition_get_value(c);
 
-
     switch(comparator){
         case COMPARATOR_LT:
             if(bandwidth < *b) {
@@ -234,7 +248,7 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
             break;
         case COMPARATOR_GT:
             if(bandwidth > *b) {
-    		print_debug("Compared Bandwidth: %zu and %zu\n", *b, bandwidth);
+                print_verb("Bandwidth: %zu < %zu\n", bandwidth, *b);
                 fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
