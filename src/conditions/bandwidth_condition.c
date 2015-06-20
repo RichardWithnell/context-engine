@@ -226,7 +226,6 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
 
     switch(comparator){
         case COMPARATOR_LT:
-            //print_debug("Voltage?: %f < %f\n", voltage, *v);
             if(bandwidth < *b) {
                 fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
@@ -235,6 +234,7 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
             break;
         case COMPARATOR_GT:
             if(bandwidth > *b) {
+                print_verb("Bandwidth: %zu < %zu\n", bandwidth, *b);
                 fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
