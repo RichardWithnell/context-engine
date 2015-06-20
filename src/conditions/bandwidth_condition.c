@@ -127,6 +127,8 @@ struct condition *parse_allowance_condition(void *k, void *v, void *c)
     unit_string = get_bandwidth_unit(value);
     units = find_unit_id(unit_string);
 
+    print_debug("UNIT_STRING: %s ID: %d\n", unit_string, units);
+
     switch(units){
         case UNIT_BITS:
             break;
@@ -241,6 +243,7 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
     switch(comparator){
         case COMPARATOR_LT:
             if(bandwidth < *b) {
+                print_verb("Bandwidth: %zu < %zu\n", bandwidth, *b);
                 fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);
@@ -248,7 +251,7 @@ struct condition * check_bandwidth_condition(struct condition *c, uint32_t bandw
             break;
         case COMPARATOR_GT:
             if(bandwidth > *b) {
-                print_verb("Bandwidth: %zu < %zu\n", bandwidth, *b);
+                print_verb("Bandwidth: %zu > %zu\n", bandwidth, *b);
                 fire_callback(c, cb, data);
             } else if(condition_get_met(c)){
                 condition_set_met(c, 0);

@@ -19,7 +19,7 @@ int find_unit_id(char *unit)
 {
     int i = 0;
     for(; i < __UNIT_MAX; i++){
-        if(!strcmp(units[i], unit)){
+        if(!strcasecmp(units[i], unit)){
             return i;
         }
     }
