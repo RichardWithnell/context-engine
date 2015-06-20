@@ -94,6 +94,7 @@ static inline int condition_check_valid_comparator(int array[], int comparator)
         if(array[i] == comparator){
             return 0;
         }
+        i++;
     }
     return -1;
 }

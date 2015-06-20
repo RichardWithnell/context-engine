@@ -106,7 +106,7 @@ struct condition *parse_allowance_condition(void *k, void *v, void *c)
         condition_free(cond);
         return (struct condition*)0;
     }
-
+    print_verb("Checking comparator is valid\n");
     if(condition_check_valid_comparator(valid_comparators, comparator_id)) {
         print_error("Comparator: %s does not make sense for condition %s\n",
           comparator, (char*)k);
@@ -142,6 +142,7 @@ struct condition *parse_condition(void *k, void *v, void *c)
     key = k;
 
     while (bandwidth_keys[i] != NULL) {
+        print_verb("Looking for key: %s\n", key);
         if(!strcmp(key, bandwidth_keys[i])){
             print_verb("Using Parser: %s\n", bandwidth_keys[i]);
             return (parsers[i])(k, v, c);

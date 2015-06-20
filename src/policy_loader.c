@@ -104,6 +104,8 @@ struct condition *parse_json_condition(cJSON *json, List *context_libs)
 
     parse_condition_t pct = context_library_get_parser(context_libs, jkey->valuestring);
 
+    print_debug("Returned paresr\n");
+
     if(!pct){
         print_error("Didn't find parser for condition\n");
         return cond;
