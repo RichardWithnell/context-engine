@@ -69,6 +69,8 @@ struct condition * condition_alloc(void)
     c = malloc(sizeof(struct condition));
 
     memset(c->key, 0, KEY_LENGTH);
+    memset(c->link_name, 0, IFNAMSIZ);
+
     c->value = 0;
     c->unit = 0;
     c->comparator = 0;

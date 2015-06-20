@@ -63,6 +63,45 @@ static const uint32_t CIDR[33] =
  0xFFFFFFFF};
 
 
+char *get_regex_match(char *value, char *r)
+{
+    static char result[16];
+    char *match = (char*)0;
+    regex_t regex;
+    int ret = 0;
+    const int n_matches = 1;
+    const char * p = value;
+    regmatch_t m[n_matches];
+
+    memset(result, 0, 16);
+
+    ret = regcomp(&regex, r, REG_EXTENDED | REG_ICASE);
+    if (ret) {
+        print_error("Failed to compile regex.\n");
+        return (char*)0;
+    }
+
+    ret = regexec(&regex, p, n_matches, m, 0);
+    if (ret) {
+        print_error("Regex Match Not Found...\n");
+        return (char*)0;
+    }
+
+    if (m[0].rm_so == -1) {
+        print_error("Regex Match rm.so == -1\n");
+        return (char*)0;
+    }
+
+    match = malloc(m[0].rm_eo - m[0].rm_so + 1);
+    memset(match, 0, m[0].rm_eo - m[0].rm_so + 1);
+    strncpy(result, value + m[0].rm_so, m[0].rm_eo - m[0].rm_so);
+
+    regfree(&regex);
+    free(match);
+
+    return result;
+}
+
 FILE * execv_and_pipe(char * binary, char *command, int *pid_out)
 {
     pid_t pid = 0;

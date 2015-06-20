@@ -9,6 +9,7 @@
 #include "../policy.h"
 #include "../debug.h"
 #include "../bandwidth_parser.h"
+#include "../util.h"
 
 #include "bandwidth_condition.h"
 #include "condition.h"

@@ -56,7 +56,7 @@ int iptables_run(char * command)
     output = execv_and_pipe("/usr/local/sbin/iptables", cmd, &pid);
 
     while(fgets(line, sizeof(line), output)) {
-        print_debug("iptables: %s\n", line);
+        //print_debug("iptables: %s\n", line);
     }
     waitpid(pid, &status, 0);
 
@@ -76,6 +76,53 @@ int iptables_run_many(char **run)
 
     return ret;
 }
+
+int iptables_mod_snat(char *ip_addr, int mark, int mod)
+{
+    char rule[512];
+    char mod_char = '0';
+
+    if(!ip_addr){
+        print_error("Interface name cannot be null\n");
+        return -1;
+    }
+
+    if(strlen(ip_addr) <= 0){
+        print_error("Interface name must be longer than 0\n");
+        return -1;
+    }
+
+    switch(mod){
+        case ADD_RULE:
+            mod_char = 'A';
+            break;
+        case DELETE_RULE:
+            mod_char = 'D';
+            break;
+        default:
+            break;
+    }
+
+    if(mod_char == '0') {
+        return -1;
+    }
+
+    memset(rule, 0, 512);
+    sprintf(rule, "/usr/local/sbin/iptables -t nat -%c POSTROUTING -m mark --mark %d -j SNAT --to-source %s", mod_char, mark, ip_addr);
+
+    return iptables_run(rule);
+}
+
+int iptables_add_snat(char *ip_addr, int mark)
+{
+    return iptables_mod_snat(ip_addr, mark, ADD_RULE);
+}
+
+int iptables_del_snat(char *ip_addr, int mark)
+{
+    return iptables_mod_snat(ip_addr, mark, DELETE_RULE);
+}
+
 
 int iptables_mod_chain(char *chain_name, char *table, int mod)
 {

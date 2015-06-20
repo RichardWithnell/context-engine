@@ -14,9 +14,9 @@ battery: battery_condition.c condition.c condition.h
 	$(CC) $(CFLAGS) -fPIC -c battery_condition.c condition.c
 	gcc -shared -Wl,-soname,libbattery_policy.so -o libbattery_policy.so battery_condition.o condition.o
 
-bandwidth: bandwidth_condition.c condition.c ../bandwidth_parser.c condition.h ../bandwidth_parser.h
-	$(CC) $(CFLAGS) -fPIC -c bandwidth_condition.c condition.c ../bandwidth_parser.c
-	gcc -shared -Wl,-soname,libbandwidth_policy.so -o libbandwidth_policy.so bandwidth_condition.o bandwidth_parser.o condition.o
+bandwidth: bandwidth_condition.c condition.c ../bandwidth_parser.c ../util.c condition.h ../bandwidth_parser.h ../util.h
+	$(CC) $(CFLAGS) -fPIC -c bandwidth_condition.c condition.c ../bandwidth_parser.c ../util.c
+	gcc -shared -Wl,-soname,libbandwidth_policy.so -o libbandwidth_policy.so bandwidth_condition.o bandwidth_parser.o util.o condition.o
 
 location: location_condition.c condition.c condition.h
 	$(CC) $(CFLAGS) -fPIC -c location_condition.c condition.c

@@ -24,7 +24,7 @@ struct condition *parse_wifi_connected_condition(void *k, void *v, void *c)
 {
     static int valid_comparators[] = { COMPARATOR_EQUALS, COMPARATOR_NEQUALS, -1 };
 
-    struct condition *cond;
+    struct condition *cond = (struct condition*)0;
     char *value = (char*)0;
     char *comparator = (char*)0;
     int comparator_id = 0;
@@ -220,7 +220,7 @@ char * read_ssid_file(char * linkname)
     memset(ssid, 0, 128);
     memset(file, 0, 512);
 
-
+    print_verb("Reading file for: %s\n", linkname);
     sprintf(file, "/tmp/ssid_%s", linkname);
 
     fd = open(file, O_RDONLY);
@@ -314,7 +314,7 @@ struct condition * check_ssid_conditions(List *conditions, condition_cb_t cb, vo
         struct condition *cond = (struct condition*)item->data;
         char *ssid = get_ssid(condition_get_link_name(cond));
         if(ssid){
-            check_ssid_condition(cond, ssid, cb, data);
+            check_ssid_condition(cond, "wlan0", cb, data);
             free(ssid);
         }
     }

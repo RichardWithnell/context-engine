@@ -7,6 +7,7 @@
 #include "../resource_manager.h"
 #include "../iptables/iptables.h"
 #include "../path_metrics/path_metric_interface.h"
+#include "../util.h"
 
 enum {
     ADD_RULE,
@@ -28,12 +29,78 @@ struct match_quality {
 
 #define SPECIFIC_RULE_ADD_POSITION 3
 
+int iptables_remove_snat(void)
+{
+    FILE* output = (FILE*)0;
+    int status = 0;
+    int pid = 0;
+    char line[512];
+    char rule[512];
+    char address[32];
+    char mark[16];
+    char *cmd = (char*)0;
+
+    cmd = malloc(strlen("iptables -t nat -L POSTROUTING")+1);
+
+    strcpy(cmd, "iptables -t nat -L POSTROUTING");
+
+    output = execv_and_pipe("/usr/local/sbin/iptables", cmd, &pid);
+
+    while(fgets(line, sizeof(line), output)) {
+        if(strstr(line, "SNAT")){
+            char *match;
+            memset(address, 0, 32);
+            memset(mark, 0, 16);
+            memset(rule, 0, 512);
+
+            match = get_regex_match(line, "0x[[:xdigit:]]+");
+            if(!match){
+                print_error("Failed to extract mark\n");
+                continue;
+            }
+            strcpy(mark, match);
+
+            match = get_regex_match(line,
+                        "([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)");
+            if(!match){
+                print_error("Failed to extract IP address\n");
+                continue;
+            }
+            strcpy(address, match);
+
+            sprintf(rule, "/usr/local/sbin/iptables -t nat -D POSTROUTING -m mark --mark %s -j SNAT --to-source %s",  mark, address);
+
+            printf("Delete RULE: %s\n", rule);
+
+            iptables_run(rule);
+        }
+    }
+    waitpid(pid, &status, 0);
+
+    free(cmd);
+
+    return 0;
+}
+
+
 int init_iptables_context(void)
 {
     int ret_val = 0;
     char *command = malloc(sizeof(char)*512);
 
     memset(command, 0, 512);
+
+    /*
+    /usr/local/sbin/iptables -D OUTPUT -t mangle -j CONTEXT
+
+    /usr/local/sbin/iptables -A OUTPUT -t mangle -j CONTEXT
+    /usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --restore-mark
+    /usr/local/sbin/iptables -A CONTEXT -t mangle -m mark ! --mark 0 -j ACCEPT
+    iptables -I CONTEXT 3 -m mark --mark 0 -s 0.0.0.0 -p tcp --dport 5001 -m conntrack --ctstate NEW -t mangle -j MARK --set-mark 4
+    /usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --save-mark
+    */
+
+    iptables_remove_snat();
 
     iptables_run("/usr/local/sbin/iptables -D OUTPUT -t mangle -j CONTEXT");
 
@@ -170,10 +237,13 @@ int create_iptables_string(struct iptables_mark_rule *rule, int mode, char *stri
     memset(tmp, 0, 512);
 
     /*
-    "iptables -I CONTEXT 3 -m mark --mark 0 -p tcp --dport 80 -m conntrack --ctstate NEW -t mangle -j MARK --set-mark 4"
+    "iptables -I CONTEXT 3 -m mark --mark 0 -s 0.0.0.0 -p tcp --dport 5001 -m conntrack --ctstate NEW -t mangle -j MARK --set-mark 4"
     */
-
-    sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -s 0.0.0.0 -p %s", mod_char, protocol);
+    if(mod_char == 'I'){
+        sprintf(string_builder, "iptables -%c CONTEXT 3 -m mark --mark 0 -s 0.0.0.0 -p %s", mod_char, protocol);
+    } else {
+        sprintf(string_builder, "iptables -%c CONTEXT -m mark --mark 0 -s 0.0.0.0 -p %s", mod_char, protocol);
+    }
 
     if(iptables_mark_rule_get_dport(rule)){
         sprintf(tmp, " --dport %d", iptables_mark_rule_get_dport(rule));

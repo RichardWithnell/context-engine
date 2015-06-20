@@ -47,6 +47,11 @@ struct action * action_alloc(void)
 {
     struct action *a = (struct action*)0;
     a = malloc(sizeof(struct action));
+    a->data = 0;
+    a->mode = 0;
+    a->force = 0;
+    a->action = 0;
+    memset(a->link_name, 0, ACTION_LINK_NAME_SIZE);
     return a;
 }
 

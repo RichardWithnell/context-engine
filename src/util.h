@@ -52,7 +52,7 @@ enum {
 #include <sys/types.h>
 #include <sys/wait.h>
 
-
+char *get_regex_match(char *value, char *r);
 FILE * execv_and_pipe(char * binary, char *command, int *pid);
 char** string_split(char* a_str, const char a_delim);
 uint32_t lookup_cidr(uint32_t netmask);

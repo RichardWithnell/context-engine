@@ -130,6 +130,10 @@ void condition_cb(struct condition *c, void *data)
 
     list_for_each(item, actions) {
         action = (struct action*)item->data;
+        if(!action){
+            print_error("Action is null: continue\n");
+            continue;
+        }
         if(action_get_mode(action) == ACTION_MODE_HARD){
             print_verb("Performing Hard Action\n");
             switch(action_get_action(action)) {
@@ -203,6 +207,7 @@ void resource_up(struct network_resource *nr, struct policy_handler_state *ph)
       network_resource_get_ifname(nr));
 
     cb = policy_handler_state_get_route_cb(ph);
+
     cb(nr, LINK_EVENT_UP, ph);
 
     return (void)0;

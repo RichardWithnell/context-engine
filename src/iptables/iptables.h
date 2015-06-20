@@ -39,4 +39,7 @@ int iptables_delete_chain(char *chain_name, char *table);
 int iptables_create_chain(char *chain_name, char *table);
 int iptables_run(char * command);
 
+int iptables_add_snat(char *ip_addr, int mark);
+int iptables_del_snat(char *ip_addr, int mark);
+
 #endif

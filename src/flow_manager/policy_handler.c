@@ -1,6 +1,7 @@
 #include <pthread.h>
 
 #include "policy_handler.h"
+#include "../iptables/iptables.h"
 #include "../debug.h"
 
 struct policy_handler_state {
@@ -145,18 +146,29 @@ void phadd_route_cb(struct mptcp_state *state, struct connection *conn, void* da
 
 int policy_handler_add_route_cb(struct network_resource *nr, struct policy_handler_state *ps)
 {
+    char addr_str[32];
     struct mptcp_state *mp_state;
     print_verb("\n");
 
+    memset(addr_str, 0, 32);
+
+    if(!nr || !ps) {
+        print_error("Parameters cannot be null\n");
+        return -1;
+    }
+
     if(network_resource_get_multipath(nr) == RULE_MULTIPATH_DISABLED){
-        print_debug("Not using resource, multipath not enabled\n");
+        print_error("Not using resource, multipath not enabled\n");
         return -1;
     }
 
     if(network_resource_get_available(nr) == RESOURCE_UNAVAILABLE){
-        print_debug("Not using resource, soft set to unavailable\n");
+        print_error("Not using resource, soft set to unavailable\n");
         return -1;
     }
+
+    strcpy(addr_str, ip_to_str(htonl(network_resource_get_address(nr))));
+    iptables_add_snat(addr_str, network_resource_get_table(nr));
 
     mp_state = ps->mp_state;
     mptcp_for_each_connection(mp_state, phadd_route_cb, nr);
@@ -287,9 +299,12 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
 
 int policy_handler_del_route_cb(struct network_resource *nr, struct policy_handler_state *ps)
 {
+    char addr_str[32];
     print_verb("\n");
     struct mptcp_state *mp_state;
     struct phdel_route_cb_data data;
+
+    memset(addr_str, 0, 32);
 
     data.nr = nr;
     data.ps = ps;
@@ -297,6 +312,9 @@ int policy_handler_del_route_cb(struct network_resource *nr, struct policy_handl
     mp_state = ps->mp_state;
 
     mptcp_for_each_connection(mp_state, phdel_route_cb, &data);
+
+    strcpy(addr_str, ip_to_str(htonl(network_resource_get_address(nr))));
+    iptables_del_snat(addr_str, network_resource_get_table(nr));
 
     route_selector(ps->network_resources,
         ps->application_specs,
@@ -346,6 +364,7 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
     if(mptcp_check_local_capability()){
         print_debug("Host is MP-Capable\n");
         mp_state = mptcp_state_alloc();
+        ph_state->mp_state = mp_state;
 
         mptcp_state_set_event_cb(mp_state, policy_handler_mptcp_cb, network_resources);
 

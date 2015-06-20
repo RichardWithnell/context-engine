@@ -13,9 +13,6 @@
 
 #define CONDKEY_TO_STR(x) condition_keystr[x]
 
-
-
-
 struct action *parse_json_action(cJSON *json)
 {
     struct action *act = (struct action*)0;
@@ -33,6 +30,9 @@ struct action *parse_json_action(cJSON *json)
     act = action_alloc();
     if(act) {
         print_verb("Action alloced\n");
+    } else {
+        print_error("Failed to allocate action\n");
+        return (struct action*)0;
     }
 
     link_id = cJSON_GetObjectItem(json, "link_id");

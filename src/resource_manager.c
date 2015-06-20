@@ -290,6 +290,9 @@ struct network_resource * network_resource_add_to_list(List *nr_list, struct mnl
     pthread_mutex_unlock(&index_bits_lock);
 
     net_res->table = read_mpdd_file_table(net_res->address, &(net_res->direct));
+    if(net_res->table == 0){
+        net_res->table = net_res->idx;
+    }
     net_res->availability_cb = cb;
     net_res->availability_data = data;
 
@@ -337,7 +340,7 @@ struct network_resource * network_resource_delete_from_list(List *nr_list, struc
 
 struct network_resource * network_resource_alloc(void)
 {
-    struct network_resource *res;
+    struct network_resource *res = (struct network_resource *)0;
 
     if(!(res = malloc(sizeof(struct network_resource)))) {
         print_error("malloc failed\n");
@@ -350,12 +353,20 @@ struct network_resource * network_resource_alloc(void)
     }
 
     res->table = 0;
+    res->table = 0;
+    res->direct = 0;
     res->idx = 0;
     res->address = 0;
     res->gateway = 0;
     res->prio = 0;
     res->family = 0;
     res->link_type = 0;
+    res->loc_id = 0;
+    res->multipath = 0;
+    res->available = 0;
+    res->availability_cb = (resource_availability_cb_t)0;
+    res->availability_data = (void*)0;
+    res->thread_running = 0;
 
     res->state = metric_alloc();
 
