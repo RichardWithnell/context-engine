@@ -69,6 +69,8 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
 {
     Litem *item = (Litem*)0;
 
+    print_debug("Add MPTCP Connection\n");
+
     conn->subflows = malloc(sizeof(List));
     list_init(conn->subflows);
     mptcp_state_lock(mp_state);
@@ -93,6 +95,8 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
 
 int policy_handler_del_mptcp_connection(struct mptcp_state *mp_state, struct connection *conn, void *data)
 {
+    print_debug("Delete MPTCP Connection\n");
+
     mptcp_state_lock(mp_state);
     conn = mptcp_state_pop_connection_by_token(mp_state, conn->token);
     mptcp_state_unlock(mp_state);
