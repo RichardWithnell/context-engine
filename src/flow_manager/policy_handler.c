@@ -49,9 +49,13 @@ int policy_handler_create_subflows_for_connection(struct mptcp_state *state, str
             continue;
         }
 
+        print_debug("Found valid interface for new subflow\n");
+
         if( network_resource_get_multipath(nr) == RULE_MULTIPATH_ENABLED
             && address != conn->saddr)
         {
+            print_debug("Found valid interface for new subflow: MP Enabled\n");
+
             ret = mptcp_create_subflow(state, address, loc_id, conn);
             if(!ret){
                 mptcp_connection_add_subflow(conn, address, loc_id, (void*)nr);
@@ -369,10 +373,10 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
         print_debug("Host is MP-Capable\n");
         mp_state = mptcp_state_alloc();
         ph_state->mp_state = mp_state;
-        mptcp_state_set_running(mp_state, 1);
+
         mptcp_state_set_event_cb(mp_state, policy_handler_mptcp_cb, network_resources);
 
-        pthread_create(&mptcp_thread, 0, mptcp_control_start, mp_state);
+        pthread_create(&mptcp_thread, 0,mptcp_control_start, mp_state);
     } else {
         print_error("Host is not MP-Capable\n");
     }
