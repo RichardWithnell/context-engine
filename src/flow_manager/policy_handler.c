@@ -373,10 +373,10 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
         print_debug("Host is MP-Capable\n");
         mp_state = mptcp_state_alloc();
         ph_state->mp_state = mp_state;
-
+        mptcp_state_set_running(mp_state, 1);
         mptcp_state_set_event_cb(mp_state, policy_handler_mptcp_cb, network_resources);
 
-        pthread_create(&mptcp_thread, 0,mptcp_control_start, mp_state);
+        pthread_create(&mptcp_thread, 0, mptcp_control_start, mp_state);
     } else {
         print_error("Host is not MP-Capable\n");
     }

@@ -331,6 +331,7 @@ void * mptcp_control_start(void *data)
     while (mptcp_state_get_running(mp_state)) {
         nl_recvmsgs_default(sock);
     }
+    print_debug("MPTCP Controller Done\n");
 
     return (void*)0;
 }
