@@ -93,6 +93,7 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
     mptcp_state_put_connection(mp_state, conn);
     mptcp_state_unlock(mp_state);
 
+    print_verb("Finding MP Capability\n");
     list_for_each(item, application_specs){
         struct application_spec *spec = (struct application_spec*)0;
         spec = (struct application_spec*)item->data;

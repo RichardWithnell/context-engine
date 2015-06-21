@@ -149,7 +149,7 @@ int mptcp_state_lock(struct mptcp_state *state)
 
 int mptcp_state_unlock(struct mptcp_state *state)
 {
-    return pthread_mutex_lock(&state->lock);
+    return pthread_mutex_unlock(&state->lock);
 }
 
 /*Connections*/
