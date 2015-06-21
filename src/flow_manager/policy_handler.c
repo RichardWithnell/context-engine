@@ -80,6 +80,7 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
 
     ph_state = (struct policy_handler_state *)data;
     network_resources = ph_state->network_resources;
+    application_specs = ph_state->application_specs;
     conn->multipath = RULE_MULTIPATH_ENABLED;
     conn->subflows = malloc(sizeof(List));
 
