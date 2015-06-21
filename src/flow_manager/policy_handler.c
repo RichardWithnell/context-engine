@@ -74,21 +74,24 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
     Litem *item = (Litem*)0;
     List *network_resources = (List*)0;
     List *application_specs = (List*)0;
-
     struct policy_handler_state *ph_state = (struct policy_handler_state*)0;
 
-    print_debug("Add MPTCP Connection\n");
+    print_debug("Add MPTCP Connection: %s:%d\n", ip_to_str(htonl(conn->daddr)), conn->dport);
 
     ph_state = (struct policy_handler_state *)data;
-
     network_resources = ph_state->network_resources;
-
+    conn->multipath = RULE_MULTIPATH_ENABLED;
     conn->subflows = malloc(sizeof(List));
+
+    if(!(conn->subflows)){
+        print_error("Failed to malloc subflow list for connection\n");
+        return -1;
+    }
+
     list_init(conn->subflows);
     mptcp_state_lock(mp_state);
     mptcp_state_put_connection(mp_state, conn);
     mptcp_state_unlock(mp_state);
-
 
     list_for_each(item, application_specs){
         struct application_spec *spec = (struct application_spec*)0;
@@ -99,10 +102,12 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
             print_debug("Found App Spec for new Connection\n");
             print_debug("\t setting MP capability\n");
             conn->multipath = application_spec_get_multipath(spec);
+            break;
         }
     }
 
     item = (Litem*)0;
+    print_verb("Setting resource for MPTCP Connection\n");
     list_for_each(item, network_resources){
         struct network_resource *netres = (struct network_resource*)0;
         netres = (struct network_resource*)item->data;
@@ -112,11 +117,12 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
             break;
         }
     }
-    conn->multipath = RULE_MULTIPATH_ENABLED;
 
-    print_verb("Connection is multipath capable\n");
     if(conn->multipath == RULE_MULTIPATH_ENABLED){
+        print_verb("Connection is multipath capable, create new subflows\n");
         policy_handler_create_subflows_for_connection(mp_state, conn, network_resources, 0);
+    } else {
+        print_verb("Connection isn't multipath capable, don't create new subflows\n");
     }
 
     return 0;
