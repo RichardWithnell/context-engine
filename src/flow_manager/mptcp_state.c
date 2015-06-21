@@ -163,8 +163,13 @@ struct connection * mptcp_state_pop_connection_by_token(struct mptcp_state *mp_s
     list_for_each(item, mptcp_state_get_connections(mp_state)){
         struct connection *c = item->data;
         if(c && c->token == token){
-            Litem *item = list_remove(mptcp_state_get_connections(mp_state), i);
-            conn = item->data;
+            List *conns = mptcp_state_get_connections(mp_state);
+            if(conns){
+                Litem *item = list_remove(conns, i);
+                conn = item->data;
+            } else {
+                print_error("List of connections is null, failed\n");
+            }
             break;
         }
         i++;

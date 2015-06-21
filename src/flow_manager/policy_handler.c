@@ -49,12 +49,13 @@ int policy_handler_create_subflows_for_connection(struct mptcp_state *state, str
             continue;
         }
 
-        print_debug("Found valid interface for new subflow\n");
-
         if( network_resource_get_multipath(nr) == RULE_MULTIPATH_ENABLED
             && address != conn->saddr)
         {
-            print_debug("Found valid interface for new subflow: MP Enabled\n");
+            print_debug("Found valid interface for new subflow: %s (MP Enabled)\n", network_resource_get_ifname(nr));
+
+            print_verb("Address of network Resource: %s\n", ip_to_str(htonl(address)));
+            print_verb("Address of new connection:   %s\n", ip_to_str(htonl(conn->saddr)));
 
             ret = mptcp_create_subflow(state, address, loc_id, conn);
             if(!ret){
