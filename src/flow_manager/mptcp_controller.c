@@ -238,7 +238,6 @@ static int add_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_state)
     print_debug("New Connection: %s:%d (%04x)\n", ip_to_str(htonl(new_conn->daddr)), new_conn->dport, new_conn->token);
 
     new_conn->transport = TCP;
-
     if(new_conn->token == 0 || new_conn->daddr == 0 || new_conn->dport == 0){
         return -1;
     }

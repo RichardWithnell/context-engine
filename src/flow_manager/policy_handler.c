@@ -69,11 +69,19 @@ int policy_handler_create_subflows_for_connection(struct mptcp_state *state, str
 }
 
 
-int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct connection *conn, List *network_resources)
+int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct connection *conn, void *data)
 {
     Litem *item = (Litem*)0;
+    List *network_resources = (List*)0;
+    List *application_specs = (List*)0;
+
+    struct policy_handler_state *ph_state = (struct policy_handler_state*)0;
 
     print_debug("Add MPTCP Connection\n");
+
+    ph_state = (struct policy_handler_state *)data;
+
+    network_resources = ph_state->network_resources;
 
     conn->subflows = malloc(sizeof(List));
     list_init(conn->subflows);
@@ -81,15 +89,32 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
     mptcp_state_put_connection(mp_state, conn);
     mptcp_state_unlock(mp_state);
 
+
+    list_for_each(item, application_specs){
+        struct application_spec *spec = (struct application_spec*)0;
+        spec = (struct application_spec*)item->data;
+        if(spec && application_spec_get_daddr(spec) == conn->daddr
+                && application_spec_get_dport(spec) == conn->dport)
+        {
+            print_debug("Found App Spec for new Connection\n");
+            print_debug("\t setting MP capability\n");
+            conn->multipath = application_spec_get_multipath(spec);
+        }
+    }
+
+    item = (Litem*)0;
     list_for_each(item, network_resources){
         struct network_resource *netres = (struct network_resource*)0;
         netres = (struct network_resource*)item->data;
         if(netres && network_resource_get_address(netres) == conn->saddr){
             conn->resource = netres;
+            print_verb("Set Resource for MPTCP Connection\n");
             break;
         }
     }
+    conn->multipath = RULE_MULTIPATH_ENABLED;
 
+    print_verb("Connection is multipath capable\n");
     if(conn->multipath == RULE_MULTIPATH_ENABLED){
         policy_handler_create_subflows_for_connection(mp_state, conn, network_resources, 0);
     }
@@ -374,7 +399,7 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
         mp_state = mptcp_state_alloc();
         ph_state->mp_state = mp_state;
         mptcp_state_set_running(mp_state, 1);
-        mptcp_state_set_event_cb(mp_state, policy_handler_mptcp_cb, network_resources);
+        mptcp_state_set_event_cb(mp_state, policy_handler_mptcp_cb, ph_state);
 
         pthread_create(&mptcp_thread, 0, mptcp_control_start, mp_state);
     } else {
