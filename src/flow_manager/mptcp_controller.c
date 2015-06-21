@@ -278,15 +278,21 @@ static int new_mptcp_event(struct nl_msg *msg, void *arg)
 
 void * mptcp_control_start(void *data)
 {
-    struct nl_sock_data *nlsd;
-    struct mptcp_state *mp_state;
+    struct nl_sock_data *nlsd = (struct nl_sock_data*)0;
+    struct mptcp_state *mp_state = (struct mptcp_state*)0;
     struct nl_sock *sock = (struct nl_sock*)0;
     int family_id = 0;
     int group_id = 0;
     int rc = 0;
 
     mp_state = (void*)data;
-    nlsd = malloc(sizeof(struct nl_sock_data*));
+    nlsd = malloc(sizeof(struct nl_sock_data));
+
+    if(!nlsd){
+        print_error("Failed to allocate libnl data struct\n");
+        return (void*)-1;
+    }
+
     sock = nl_socket_alloc();
     if(!sock) {
         print_error("Failed to alloc socket\n");

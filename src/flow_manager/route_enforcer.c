@@ -46,6 +46,11 @@ int iptables_remove_snat(void)
 
     output = execv_and_pipe("/usr/local/sbin/iptables", cmd, &pid);
 
+    if(!output){
+        print_error("Could not exec iptables\n");
+        return -1;
+    }
+
     while(fgets(line, sizeof(line), output)) {
         if(strstr(line, "SNAT")){
             char *match;
