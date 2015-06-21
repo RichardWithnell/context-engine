@@ -245,7 +245,7 @@ static int add_connection(struct genlmsghdr *ghdr, struct mptcp_state *mp_state)
 
     cb = mptcp_state_get_event_cb(mp_state);
     if(cb){
-        cb(mp_state, new_conn, MPTCP_REM_CONN, mptcp_state_get_cb_data(mp_state));
+        cb(mp_state, new_conn, MPTCP_ADD_CONN, mptcp_state_get_cb_data(mp_state));
     }
 
     return 0;
