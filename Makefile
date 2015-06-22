@@ -6,14 +6,14 @@ LIB_PATH = /usr/lib/
 INC_PATH = /usr/include/libnl3
 LDFLAGS = -lm -lnl-3 -lnl-genl-3 -lrt -lmnl -lpthread -lnetfilter_conntrack -ldl
 CC=gcc
-CFLAGS= -g -Wall
+CFLAGS= -g -Wall -fstack-protector-all -Wstack-protector -fno-omit-frame-pointer
 
 ifndef ARCH
 	ARCH:=$(shell uname -m)
 endif
 
 ifeq ($(ARCH),sim)
-    CFLAGS += -DDCE_NS3_FIX -fPIC -U_FORTIFY_SOURCE -fstack-protector-all -Wstack-protector -fno-omit-frame-pointer
+    CFLAGS += -DDCE_NS3_FIX -fPIC -U_FORTIFY_SOURCE
     OPTS = -pie -rdynamic
 endif
 
