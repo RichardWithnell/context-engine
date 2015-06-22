@@ -83,14 +83,12 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
     network_resources = ph_state->network_resources;
     application_specs = ph_state->application_specs;
     conn->multipath = RULE_MULTIPATH_ENABLED;
-    conn->subflows = malloc(sizeof(List));
 
     if(!(conn->subflows)){
         print_error("Failed to malloc subflow list for connection\n");
         return -1;
     }
 
-    list_init(conn->subflows);
     mptcp_state_lock(mp_state);
     mptcp_state_put_connection(mp_state, conn);
     mptcp_state_unlock(mp_state);
@@ -139,9 +137,11 @@ int policy_handler_del_mptcp_connection(struct mptcp_state *mp_state, struct con
     conn = mptcp_state_pop_connection_by_token(mp_state, conn->token);
     mptcp_state_unlock(mp_state);
 
-    list_destroy(conn->subflows);
-    free(conn);
-
+    if(conn){
+        list_destroy(conn->subflows);
+        free(conn);
+    }
+    
     return 0;
 }
 
