@@ -98,6 +98,7 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
         struct application_spec *spec = (struct application_spec*)0;
         spec = (struct application_spec*)item->data;
         print_verb("Comparing: %zu and %zu\n", application_spec_get_daddr(spec), conn->daddr);
+        print_verb("Comparing: %u and %u\n", application_spec_get_dport(spec), conn->dport);
         if(spec && htonl(application_spec_get_daddr(spec)) == conn->daddr
                 && htons(application_spec_get_dport(spec)) == conn->dport)
         {
