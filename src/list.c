@@ -185,7 +185,9 @@ Litem* list_remove(List* l, uint32_t index)
     }
 
     l->size--;
-    l->list_put_cb(l, tmp, l->rem_cb_data);
+    if(l->list_rem_cb){
+        l->list_rem_cb(l, tmp, l->rem_cb_data);
+    }
     return curr;
 }
 
