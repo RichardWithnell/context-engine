@@ -167,9 +167,9 @@ struct connection * mptcp_state_pop_connection_by_token(struct mptcp_state *mp_s
             if(conns){
                 print_debug("Removing Index: %d - list size (%d) - token: %02x\n", i, list_size(conns), token);
                 Litem *pop = (Litem*)0;
-                print_debug("List Remove Pointer: %p\n", list_remove);
+                print_debug("List Remove Pointer: %p Conns Pointer: %p Index: %d\n", list_remove, conns, i);
                 pop = list_remove(conns, i);
-                conn = pop->data;
+                //conn = pop->data;
             } else {
                 print_error("List of connections is null, failed\n");
             }
@@ -178,7 +178,7 @@ struct connection * mptcp_state_pop_connection_by_token(struct mptcp_state *mp_s
         i++;
     }
 
-    return conn;
+    return (struct connection *)0;
 }
 
 void mptcp_state_put_connection(struct mptcp_state *state, struct connection *c)
