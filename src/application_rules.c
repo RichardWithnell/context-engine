@@ -35,7 +35,7 @@ void print_application_spec(struct application_spec *as)
     print_debug("\tLoss: %f\n", as->required_loss);
     print_debug("\tLatency: %f\n", as->required_latency);
     print_debug("\tJitter: %f\n", as->required_jitter);
-    print_debug("\tMP: %u\n\n", as->multipath);
+    print_debug("\tMP: %u\n", as->multipath);
     print_debug("\tAllocate: %u\n\n", as->allocate);
 }
 
@@ -113,9 +113,9 @@ int parse_application_spec(cJSON *json, struct application_spec *as)
     }
 
     if(proto){
-        if(strcmp(proto->valuestring, "TCP")){
+        if(!strcasecmp(proto->valuestring, "TCP")){
             as->proto = TCP;
-        } else if (strcmp(proto->valuestring, "UDP")) {
+        } else if (!strcasecmp(proto->valuestring, "UDP")) {
             as->proto = UDP;
         } else {
             as->proto = 0;
@@ -186,25 +186,25 @@ int parse_requirement_spec(cJSON *json, struct application_spec *as)
     }
 
     if(multipath){
-        if(strcasecmp(multipath->valuestring, "enabled")){
+        if(!strcasecmp(multipath->valuestring, "enabled")){
             as->multipath = RULE_MULTIPATH_ENABLED;
-        } else if(strcasecmp(multipath->valuestring, "disabled")){
+        } else if(!strcasecmp(multipath->valuestring, "disabled")){
             as->multipath = RULE_MULTIPATH_DISABLED;
         }
     } else {
         as->multipath = DEFAULT_MULTIPATH_BEHAVIOUR;
-        printf("No Multipath Parameter Set\n");
+        print_error("No Multipath Parameter Set\n");
     }
 
     if(allocate){
-        if(strcasecmp(allocate->valuestring, "yes")){
+        if(!strcasecmp(allocate->valuestring, "yes")){
             as->allocate = RULE_ALLOCATE_RESOURCE_YES;
-        } else if(strcasecmp(multipath->valuestring, "no")) {
+        } else if(!strcasecmp(multipath->valuestring, "no")) {
             as->allocate = RULE_ALLOCATE_RESOURCE_NO;
         }
     } else {
         as->allocate = RULE_ALLOCATE_RESOURCE_NO;
-        printf("No Multipath Parameter Set\n");
+        print_error("No Allocation Parameter Set\n");
     }
 
     return 0;

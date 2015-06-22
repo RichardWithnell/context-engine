@@ -101,9 +101,9 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
         if(spec && application_spec_get_daddr(spec) == conn->daddr
                 && application_spec_get_dport(spec) == conn->dport)
         {
-            print_debug("Found App Spec for new Connection\n");
-            print_debug("\t setting MP capability\n");
             conn->multipath = application_spec_get_multipath(spec);
+            print_debug("Found App Spec for new Connection\n");
+            print_debug("\t setting MP capability: %d\n", application_spec_get_multipath(spec));
             break;
         }
     }
