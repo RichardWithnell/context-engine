@@ -165,6 +165,7 @@ struct connection * mptcp_state_pop_connection_by_token(struct mptcp_state *mp_s
         if(c && c->token == token){
             List *conns = mptcp_state_get_connections(mp_state);
             if(conns){
+                print_debug("Removing Index: %d - list size (%d) - token: %zu\n", i, list_size(conns), token);
                 Litem *item = list_remove(conns, i);
                 conn = item->data;
             } else {
