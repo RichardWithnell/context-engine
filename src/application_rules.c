@@ -291,7 +291,7 @@ void application_spec_free(struct application_spec *as)
 
 uint8_t application_spec_get_allocate(struct application_spec *as)
 {
-    as->required_bw = bw;
+    return as->allocate;
 }
 
 void application_spec_set_required_bw(struct application_spec *as, uint32_t bw)
