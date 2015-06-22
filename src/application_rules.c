@@ -102,14 +102,14 @@ int parse_application_spec(cJSON *json, struct application_spec *as)
         char *ptr;
         uint16_t dprt;
         dprt = strtol(dport->valuestring, &ptr, 10);
-        as->dport = dprt;
+        as->dport = htons(dprt);
     }
 
     if(sport) {
         char *ptr;
         uint16_t sprt;
         sprt = strtol(sport->valuestring, &ptr, 10);
-        as->sport = sprt;
+        as->sport = htons(sprt);
     }
 
     if(proto){
