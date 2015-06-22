@@ -20,6 +20,7 @@ struct application_spec {
     double required_jitter;
     uint8_t multipath;
     uint8_t migrate;
+    uint8_t allocate;
 };
 
 
@@ -35,6 +36,7 @@ void print_application_spec(struct application_spec *as)
     print_debug("\tLatency: %f\n", as->required_latency);
     print_debug("\tJitter: %f\n", as->required_jitter);
     print_debug("\tMP: %u\n\n", as->multipath);
+    print_debug("\tAllocate: %u\n\n", as->allocate);
 }
 
 struct application_spec *application_spec_alloc(void)
@@ -133,12 +135,14 @@ int parse_requirement_spec(cJSON *json, struct application_spec *as)
     cJSON *jitter = (cJSON*)0;
     cJSON *latency = (cJSON*)0;
     cJSON *multipath = (cJSON*)0;
+    cJSON *allocate = (cJSON*)0;
 
     bandwidth = cJSON_GetObjectItem(json, "bandwidth");
     loss = cJSON_GetObjectItem(json, "loss");
     jitter = cJSON_GetObjectItem(json, "jitter");
     latency = cJSON_GetObjectItem(json, "latency");
     multipath = cJSON_GetObjectItem(json, "multipath");
+    allocate = cJSON_GetObjectItem(json, "allocate");
 
     if(bandwidth){
         if(!validate_bandwidth_value(bandwidth->valuestring)){
@@ -189,6 +193,17 @@ int parse_requirement_spec(cJSON *json, struct application_spec *as)
         }
     } else {
         as->multipath = DEFAULT_MULTIPATH_BEHAVIOUR;
+        printf("No Multipath Parameter Set\n");
+    }
+
+    if(allocate){
+        if(strcasecmp(allocate->valuestring, "yes")){
+            as->allocate = RULE_ALLOCATE_RESOURCE_YES;
+        } else if(strcasecmp(multipath->valuestring, "no")) {
+            as->allocate = RULE_ALLOCATE_RESOURCE_NO;
+        }
+    } else {
+        as->allocate = RULE_ALLOCATE_RESOURCE_NO;
         printf("No Multipath Parameter Set\n");
     }
 

@@ -97,8 +97,9 @@ int policy_handler_add_mptcp_connection(struct mptcp_state *mp_state, struct con
     list_for_each(item, application_specs){
         struct application_spec *spec = (struct application_spec*)0;
         spec = (struct application_spec*)item->data;
-        if(spec && application_spec_get_daddr(spec) == conn->daddr
-                && application_spec_get_dport(spec) == conn->dport)
+        print_verb("Comparing: %zu and %zu\n", application_spec_get_daddr(spec), conn->daddr);
+        if(spec && htonl(application_spec_get_daddr(spec)) == conn->daddr
+                && htons(application_spec_get_dport(spec)) == conn->dport)
         {
             print_debug("Found App Spec for new Connection\n");
             print_debug("\t setting MP capability\n");
@@ -141,7 +142,7 @@ int policy_handler_del_mptcp_connection(struct mptcp_state *mp_state, struct con
         list_destroy(conn->subflows);
         free(conn);
     }
-    
+
     return 0;
 }
 
