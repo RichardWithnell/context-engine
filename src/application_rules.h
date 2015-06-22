@@ -45,6 +45,7 @@ void application_spec_set_required_loss(struct application_spec *as, double jitt
 void application_spec_set_multipath(struct application_spec *as, uint8_t mp);
 
 /*Getters*/
+uint8_t application_spec_get_allocate(struct application_spec *as);
 uint32_t application_spec_get_daddr(struct application_spec *as);
 uint32_t application_spec_get_saddr(struct application_spec *as);
 uint16_t application_spec_get_dport(struct application_spec *as);

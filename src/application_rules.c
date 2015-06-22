@@ -197,9 +197,9 @@ int parse_requirement_spec(cJSON *json, struct application_spec *as)
     }
 
     if(allocate){
-        if(!strcasecmp(allocate->valuestring, "yes")){
+        if(!strcasecmp(allocate->valuestring, "enabled")){
             as->allocate = RULE_ALLOCATE_RESOURCE_YES;
-        } else if(!strcasecmp(multipath->valuestring, "no")) {
+        } else if(!strcasecmp(multipath->valuestring, "disabled")) {
             as->allocate = RULE_ALLOCATE_RESOURCE_NO;
         }
     } else {
@@ -287,6 +287,11 @@ List * load_application_specs(char *config_file)
 void application_spec_free(struct application_spec *as)
 {
     free(as);
+}
+
+uint8_t application_spec_get_allocate(struct application_spec *as)
+{
+    as->required_bw = bw;
 }
 
 void application_spec_set_required_bw(struct application_spec *as, uint32_t bw)

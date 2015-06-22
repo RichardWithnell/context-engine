@@ -377,6 +377,11 @@ int route_selector(List * resource_list, List * app_specs, List * iptables_rules
             continue;
         }
 
+        if(application_spec_get_allocate(spec) != RULE_ALLOCATE_RESOURCE_YES){
+            print_verb("Not allocating resource to link, trust the application chose the source\n");
+            continue;
+        }
+
         candidate = route_selector_resource_loop(resource_list, spec, 0);
         if(!candidate) {
             route_selector_resource_loop(resource_list, spec, 1);
