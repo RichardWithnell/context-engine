@@ -154,10 +154,16 @@ void condition_cb(struct condition *c, void *data)
             }
         } else if (act_mode == ACTION_MODE_SOFT) {
             Litem *net_res = (Litem*)0;
+            int update_flag = 0;
             print_verb("Performing Soft Action\n");
+
+            print_verb("NetRes List Size: %d\n", list_size(netres_list));
+
             list_for_each(net_res, netres_list){
                 struct network_resource *res = (struct network_resource*)0;
                 res = net_res->data;
+
+
 
                 print_debug("Compare: %s and %s\n",
                   network_resource_get_ifname(res),
@@ -181,6 +187,7 @@ void condition_cb(struct condition *c, void *data)
                                 RESOURCE_AVAILABLE);
                             /*Add Subflows*/
                             policy_handler_add_route_cb(res, ph_state);
+                            update_flag = 1;
                         }
                     } else if(act == ACTION_DISABLE){
                         if(network_resource_get_available(res)
@@ -197,6 +204,7 @@ void condition_cb(struct condition *c, void *data)
 
                             /*Remove Subflows*/
                             policy_handler_del_route_cb(res, ph_state);
+                            update_flag = 1;
                         }
                     } else {
                         print_error("Unhandled action\n");
@@ -204,11 +212,15 @@ void condition_cb(struct condition *c, void *data)
                 }
             }
 
-            route_selector(netres_list,
-                application_specs,
-                iptables_rules);
+            if(update_flag){
+                /*Recalculate Routes*/
+                route_selector(netres_list,
+                    application_specs,
+                    iptables_rules);
+            }
+            /*Else no change actually occured*/
 
-            /*Recalculate Routes*/
+
         } else {
             print_error("Unknown action mode: %d\n", act_mode);
         }
