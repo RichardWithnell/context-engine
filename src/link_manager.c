@@ -13,6 +13,7 @@
 #include "debug.h"
 
 enum {
+    LINK_UNSPEC,
     LINK_UP,
     LINK_DOWN
 };
@@ -40,7 +41,7 @@ int link_manager_mod(char *ifname, int mode)
     nlh = mnl_nlmsg_put_header(buf);
     nlh->nlmsg_type	= RTM_NEWLINK;
     nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK;
-    nlh->nlmsg_seq = seq = time(NULL);
+    nlh->nlmsg_seq = seq = time(0);
     ifm = mnl_nlmsg_put_extra_header(nlh, sizeof(*ifm));
     ifm->ifi_family = AF_UNSPEC;
     ifm->ifi_change = change;
@@ -49,13 +50,13 @@ int link_manager_mod(char *ifname, int mode)
     mnl_attr_put_str(nlh, IFLA_IFNAME, ifname);
 
     nl = mnl_socket_open(NETLINK_ROUTE);
-    if (nl == NULL) {
+    if (!nl) {
         print_error("mnl_socket_open");
         return -1;
     }
 
     if (mnl_socket_bind(nl, 0, MNL_SOCKET_AUTOPID) < 0) {
-        perror("mnl_socket_bind");
+        print_error("mnl_socket_bind");
         return -1;
     }
     portid = mnl_socket_get_portid(nl);
@@ -74,7 +75,7 @@ int link_manager_mod(char *ifname, int mode)
         return -1;
     }
 
-    ret = mnl_cb_run(buf, ret, seq, portid, NULL, NULL);
+    ret = mnl_cb_run(buf, ret, seq, portid, 0, 0);
     if (ret == -1){
         print_error("callback");
         return -1;

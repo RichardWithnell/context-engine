@@ -90,13 +90,13 @@ void condition_cb(struct condition *c, void *data)
     List *netres_list = (List*)0;
     List *application_specs = (List*)0;
     List *iptables_rules = (List*)0;
-    Litem *item = (Litem*)0;
+    Litem *item = (Litem*)0
 
-    ph_state = ( struct policy_handler_state*) data;
+    ph_state = (struct policy_handler_state*) data;
 
     netres_list = policy_handler_state_get_resources(ph_state);
     iptables_rules = policy_handler_state_get_rules(ph_state);
-    application_specs = policy_handler_state_get_resources(ph_state);
+    application_specs = policy_handler_state_get_specs(ph_state);
 
     pd = condition_get_parent(c);
 
@@ -161,11 +161,12 @@ void condition_cb(struct condition *c, void *data)
 
             list_for_each(net_res, netres_list){
                 struct network_resource *res = (struct network_resource*)0;
-                res = net_res->data;
+                res = (struct network_resource*)net_res->data;
 
+                print_verb("Looking at resource: %s\n",
+                    ip_to_str(htonl(network_resource_get_address(res))));
 
-
-                print_debug("Compare: %s and %s\n",
+                print_verb("Compare: %s and %s\n",
                   network_resource_get_ifname(res),
                   action_get_link_name(action));
 
@@ -381,7 +382,7 @@ int main(void)
     ccbd.application_specs = application_specs;
     ccbd.iptables_rules = policy_handler_state_get_rules(ph_state);
 
-    context_library_start(context_libs, condition_cb, &ccbd);
+    context_library_start(context_libs, condition_cb, ph_state);
 
     while(running) {
         print_verb("Waiting on barrier\n");
