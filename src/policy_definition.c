@@ -28,7 +28,6 @@ void policy_definition_for_each_action(struct policy_definition *pd, policy_list
     }
 }
 
-
 void policy_definition_for_each_condition(struct policy_definition *pd, policy_list_condition_cb_t cb, void *data)
 {
     Litem *item;
@@ -39,7 +38,6 @@ void policy_definition_for_each_condition(struct policy_definition *pd, policy_l
         cb(c, data);
     }
 }
-
 
 struct policy_definition * policy_definition_alloc()
 {

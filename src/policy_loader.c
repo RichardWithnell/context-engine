@@ -41,11 +41,16 @@ struct action *parse_json_action(cJSON *json)
         return act;
     }
 
+    action_set_link_name(act, link_id->valuestring);
+
     do_act = cJSON_GetObjectItem(json, "do");
     if(!do_act) {
         print_error("Could not parse do\n");
         return act;
     }
+
+    action_id = find_action_id(do_act->valuestring);
+    action_set_action(act, action_id);
 
     mode = cJSON_GetObjectItem(json, "mode");
     if(mode) {
@@ -65,14 +70,7 @@ struct action *parse_json_action(cJSON *json)
         action_set_mode(act, ACTION_MODE_UNSPEC);
         print_verb("Action Mode Set to unspec\n");
     }
-
-    action_id = find_action_id(do_act->valuestring);
-
-    action_set_action(act, action_id);
-    action_set_link_name(act, link_id->valuestring);
-
-
-
+    
     return act;
 }
 

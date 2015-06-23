@@ -168,21 +168,36 @@ void condition_cb(struct condition *c, void *data)
                 {
                     uint8_t act = action_get_action(action);
                     if(act == ACTION_ENABLE){
-                        print_verb("Action: Enable %s\n",
-                            action_get_link_name(action));
-                        network_resource_set_available(res,
-                            RESOURCE_AVAILABLE);
-
-                        /*Add Subflows*/
-                        policy_handler_add_route_cb(res, ph_state);
+                        if(network_resource_get_available(res)
+                          == RESOURCE_AVAILABLE)
+                        {
+                            print_verb("Resource Already in available state, "
+                                        "do nothng\n");
+                            continue;
+                        } else {
+                            print_verb("Action: Enable %s\n",
+                                action_get_link_name(action));
+                            network_resource_set_available(res,
+                                RESOURCE_AVAILABLE);
+                            /*Add Subflows*/
+                            policy_handler_add_route_cb(res, ph_state);
+                        }
                     } else if(act == ACTION_DISABLE){
-                        print_verb("Action: Disable %s\n",
-                            action_get_link_name(action));
-                        network_resource_set_available(res,
-                            RESOURCE_UNAVAILABLE);
+                        if(network_resource_get_available(res)
+                          == RESOURCE_UNAVAILABLE)
+                        {
+                            print_verb("Resource Already in unavailable state, "
+                                        "do nothng\n");
+                            continue;
+                        } else {
+                            print_verb("Action: Disable %s\n",
+                                action_get_link_name(action));
+                            network_resource_set_available(res,
+                                RESOURCE_UNAVAILABLE);
 
-                        /*Remove Subflows*/
-                        policy_handler_del_route_cb(res, ph_state);
+                            /*Remove Subflows*/
+                            policy_handler_del_route_cb(res, ph_state);
+                        }
                     } else {
                         print_error("Unhandled action\n");
                     }

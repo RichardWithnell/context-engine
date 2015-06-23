@@ -622,7 +622,8 @@ int lookup_name_cb(const struct nlmsghdr *nlh, void *data)
     			}
                 print_verb("Name Found: %s\n", mnl_attr_get_str(attr));
     			strcpy(cb_data->name, mnl_attr_get_str(attr));
-                trimwhitespace(cb_data->name);
+                print_verb("Name Set To: %s\n", cb_data->name);
+                //trimwhitespace(cb_data->name);
     			break;
 		}
 	}
@@ -639,6 +640,8 @@ int lookup_name(struct network_resource *nr, char *name)
 	unsigned int seq, portid;
 
     struct name_cb_data cb_data;
+
+    print_verb("Looking up name\n");
 
     cb_data.name = name;
     memset(cb_data.name, 0, IFNAMSIZ);
@@ -707,6 +710,7 @@ struct network_resource *mnl_route_to_resource(struct mnl_route *route)
     res->table = 0;
     res->direct = 0;
     lookup_name(res, res->ifname);
+    print_verb("Created Resource: %s\n", res->ifname);
     return res;
 }
 
