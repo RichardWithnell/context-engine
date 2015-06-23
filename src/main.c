@@ -158,7 +158,12 @@ void condition_cb(struct condition *c, void *data)
             list_for_each(net_res, netres_list){
                 struct network_resource *res = (struct network_resource*)0;
                 res = net_res->data;
-                if(strcmp(network_resource_get_ifname(res),
+
+                print_debug("Compare: %s and %s\n",
+                  network_resource_get_ifname(res),
+                  action_get_link_name(action));
+
+                if(!strcasecmp(network_resource_get_ifname(res),
                             action_get_link_name(action)))
                 {
                     uint8_t act = action_get_action(action);
