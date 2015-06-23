@@ -120,6 +120,7 @@ struct resource_thread_params {
 int network_resource_set_link_profile(struct network_resource *nr, List *profiles)
 {
     Litem *item = (Litem*)0;
+    print_verb("Setting Link Profile For: %s\n", nr->ifname);
     list_for_each(item, profiles){
         struct physical_link *pl;
         pl = (struct physical_link *)item->data;
@@ -623,7 +624,7 @@ int lookup_name_cb(const struct nlmsghdr *nlh, void *data)
                 print_verb("Name Found: %s\n", mnl_attr_get_str(attr));
     			strcpy(cb_data->name, mnl_attr_get_str(attr));
                 print_verb("Name Set To: %s\n", cb_data->name);
-                //trimwhitespace(cb_data->name);
+                trimwhitespace(cb_data->name);
     			break;
 		}
 	}
