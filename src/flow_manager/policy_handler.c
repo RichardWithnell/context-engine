@@ -349,6 +349,8 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
                 idx++;
             }
         }
+    } else {
+        print_verb(" Unknown Connection Multipath Mode Set To: %zu\n", connection->multipath);
     }
 }
 
