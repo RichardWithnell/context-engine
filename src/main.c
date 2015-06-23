@@ -90,7 +90,7 @@ void condition_cb(struct condition *c, void *data)
     List *netres_list = (List*)0;
     List *application_specs = (List*)0;
     List *iptables_rules = (List*)0;
-    Litem *item = (Litem*)0
+    Litem *item = (Litem*)0;
 
     ph_state = (struct policy_handler_state*) data;
 
