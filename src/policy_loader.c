@@ -50,9 +50,9 @@ struct action *parse_json_action(cJSON *json)
     mode = cJSON_GetObjectItem(json, "mode");
     if(mode) {
         print_verb("Found Mode: %s\n", mode->valuestring);
-        return act;
     } else {
         print_error("No Mode Set\n");
+        return act;
     }
 
     if(!strcmp(mode->valuestring, "hard")){
