@@ -132,13 +132,19 @@ void condition_cb(struct condition *c, void *data)
     print_verb("All Conditions Met\n");
     /*All conditions Met*/
 
+    print_verb("Performing %d actions\n"m list_size(actions));
     list_for_each(item, actions) {
+        int act_mode = 0;
         action = (struct action*)item->data;
+        act_mode = action_get_mode(action);
         if(!action){
             print_error("Action is null: continue\n");
             continue;
         }
-        if(action_get_mode(action) == ACTION_MODE_HARD){
+
+        action_print(action);
+
+        if(act_mode == ACTION_MODE_HARD){
             print_verb("Performing Hard Action\n");
             switch(action_get_action(action)) {
                 case ACTION_DISABLE:
@@ -146,7 +152,7 @@ void condition_cb(struct condition *c, void *data)
                 case ACTION_ENABLE:
                     link_manager_up(action_get_link_name(action));
             }
-        } else if (action_get_mode(action) == ACTION_MODE_SOFT) {
+        } else if (act_mode == ACTION_MODE_SOFT) {
             Litem *net_res = (Litem*)0;
             print_verb("Performing Soft Action\n");
             list_for_each(net_res, netres_list){
@@ -184,7 +190,7 @@ void condition_cb(struct condition *c, void *data)
 
             /*Recalculate Routes*/
         } else {
-            print_error("Unknown action mode\n");
+            print_error("Unknown action mode: %d\n", act_mode);
         }
     }
 
