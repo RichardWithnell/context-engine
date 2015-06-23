@@ -57,8 +57,13 @@ struct action *parse_json_action(cJSON *json)
 
     if(!strcmp(mode->valuestring, "hard")){
         action_set_mode(act, ACTION_MODE_HARD);
-    } else {
+        print_verb("Action Mode Set to HARD\n");
+    } else if(!strcmp(mode->valuestring, "soft")){
         action_set_mode(act, ACTION_MODE_SOFT);
+        print_verb("Action Mode Set to SOFT\n");
+    } else {
+        action_set_mode(act, ACTION_MODE_UNSPEC);
+        print_verb("Action Mode Set to unspec\n");
     }
 
     action_id = find_action_id(do_act->valuestring);
