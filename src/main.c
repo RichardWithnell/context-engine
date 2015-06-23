@@ -132,7 +132,7 @@ void condition_cb(struct condition *c, void *data)
     print_verb("All Conditions Met\n");
     /*All conditions Met*/
 
-    print_verb("Performing %d actions\n"m list_size(actions));
+    print_verb("Performing %d actions\n", list_size(actions));
     list_for_each(item, actions) {
         int act_mode = 0;
         action = (struct action*)item->data;
