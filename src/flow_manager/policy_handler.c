@@ -238,8 +238,13 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
 
     address = network_resource_get_address(nr);
 
+    print_verb("\n");
+
     if(connection->multipath == RULE_MULTIPATH_ENABLED){
+        print_verb("Multipath Set for Connection\n");
+        print_verb("\tCompare: %zu and %zu\n", connection->saddr, address);
         if(connection->saddr == address){
+            print_verb("\tMatch Found\n");
             connection->active = 0;
             connection->resource = 0;
             mptcp_remove_subflow(state, address, network_resource_get_loc_id(nr), connection);
@@ -249,7 +254,9 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
 
             list_for_each(item, connection->subflows) {
                 struct subflow *sf = (struct subflow*)item->data;
+                print_verb("\tCompare: %zu and %zu\n", sf->saddr, address);
                 if(sf->saddr == address){
+                    print_verb("\tMatch Found\n");
                     mptcp_remove_subflow(state, address, network_resource_get_loc_id(nr), connection);
                     list_remove(connection->subflows, idx);
                     free(item);
@@ -270,6 +277,8 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
         struct network_resource *candidate = (struct network_resource*)0;
         struct application_spec *spec = (struct application_spec*)0;
         Litem *item = (Litem*)0;
+
+        print_verb("Connection set to handover\n");
 
         list_for_each(item, ps->application_specs){
             struct application_spec  *tmp = item->data;
@@ -310,7 +319,9 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
         }
 
         /*Remove old address*/
+        print_verb("\tCompare: %zu and %zu\n", connection->saddr, address);
         if(connection->saddr == address){
+            print_verb("\tMatch Found\n");
             mptcp_remove_subflow(state, address,
                 network_resource_get_loc_id(nr),
                 connection);
@@ -322,7 +333,9 @@ void phdel_route_cb(struct mptcp_state *state, struct connection *connection, vo
 
             list_for_each(item, connection->subflows) {
                 struct subflow *sf = (struct subflow*)item->data;
+                print_verb("\tCompare: %zu and %zu\n", connection->saddr, address);
                 if(sf->saddr == address){
+                    print_verb("\tMatch Found\n");
                     mptcp_remove_subflow(state,
                         address,
                         network_resource_get_loc_id(nr),
@@ -354,11 +367,13 @@ int policy_handler_del_route_cb(struct network_resource *nr, struct policy_handl
 
     mp_state = ps->mp_state;
 
+    print_verb("Calling MPTCP for each connection\n");
     mptcp_for_each_connection(mp_state, phdel_route_cb, &data);
 
     strcpy(addr_str, ip_to_str(htonl(network_resource_get_address(nr))));
+    print_verb("Calling del snat rule\n");
     iptables_del_snat(addr_str, network_resource_get_table(nr));
-
+    print_verb("Run route selector\n");
     route_selector(ps->network_resources,
         ps->application_specs,
         ps->iptables_rules);
