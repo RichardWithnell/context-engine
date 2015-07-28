@@ -53,7 +53,7 @@ int iptables_run(char * command)
 
     strcpy(cmd, command);
 
-    output = execv_and_pipe("/usr/local/sbin/iptables", cmd, &pid);
+    output = execv_and_pipe("iptables", cmd, &pid);
 
     while(fgets(line, sizeof(line), output)) {
         //print_debug("iptables: %s\n", line);
