@@ -212,6 +212,9 @@ void * network_resource_thread_start(void *data)
             metric_update(nr->state, endpoint, local);
             diff = metric_cmp(ps, nr->state);
             free(ps);
+            #ifdef USE_PCA
+            nr->availability_cb(nr, nr->availability_data);
+            #else
             if(diff != 0.00){
                 print_verb("Metric difference: %f\n", diff);
                 /*Fire Metric Change Callback*/
@@ -219,6 +222,7 @@ void * network_resource_thread_start(void *data)
             } else {
                 print_debug("Metrics too similar, don't bother recalculating routes\n");
             }
+            #endif
             print_path_stats(nr->state, nr->ifname);
         } else {
             print_verb("Network Resource Struct not yet fully populated\n");

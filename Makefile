@@ -6,7 +6,10 @@ LIB_PATH = /usr/lib/
 INC_PATH = /usr/include/libnl3
 LDFLAGS = -lm -lnl-3 -lnl-genl-3 -lrt -lmnl -lpthread -lnetfilter_conntrack -ldl
 CC=gcc
-CFLAGS= -g -Wall -fstack-protector-all -Wstack-protector -fno-omit-frame-pointer
+CFLAGS= -g -Wall -fstack-protector-all -Wstack-protector -fno-omit-frame-pointer -DUSE_PCA
+
+py_includes:=$(shell python-config --includes)
+py_ldflags:=$(shell python-config --ldflags)
 
 ifndef ARCH
 	ARCH:=$(shell uname -m)
@@ -36,7 +39,9 @@ OBJS =	$(BUILD_PATH)lmnl_interface.o \
 		$(BUILD_PATH)condition.o \
 		$(BUILD_PATH)context_library.o \
 		$(BUILD_PATH)resource_manager.o \
-		$(BUILD_PATH)link_manager.o \
+		$(BUILD_PATH)link_manager_interface.o \
+		$(BUILD_PATH)exec_link_manager.o \
+		$(BUILD_PATH)mnl_link_manager.o \
 		$(BUILD_PATH)link_loader.o \
 		$(BUILD_PATH)mptcp_controller.o \
 		$(BUILD_PATH)mptcp_state.o \
@@ -50,11 +55,16 @@ OBJS =	$(BUILD_PATH)lmnl_interface.o \
 		$(BUILD_PATH)application_rules.o \
 		$(BUILD_PATH)policy_handler.o \
 		$(BUILD_PATH)route_enforcer.o \
+		$(BUILD_PATH)pca_ps.o \
 		cjson/cJSON.o
 
 all: context-engine
 
-tests: test_route_enforcer
+tests: test_route_enforcer test_link_manager
+
+install: context-engine
+	cp -r ./src/path_selection/ /usr/local/lib/python2.7/dist-packages/
+	cp $(BIN_PATH)context-engine /usr/sbin/
 
 test_bin_dir:
 	@if [ ! -d "$(TEST_BIN_PATH)" ]; then mkdir -p $(TEST_BIN_PATH); fi;
@@ -66,7 +76,7 @@ bin_arch_dir:
 	@if [ ! -d "$(BIN_PATH)" ]; then mkdir -p $(BIN_PATH); fi;
 
 context-engine: build_arch_dir bin_arch_dir $(SRC_PATH)main.c $(OBJS) cjson condition_libs
-	$(CC) $(CFLAGS) -o $(BIN_PATH)context-engine $(SRC_PATH)main.c $(OPTS) $(OBJS) -I$(INC_PATH) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(py_includes) -o $(BIN_PATH)context-engine $(SRC_PATH)main.c $(OPTS) $(OBJS) -I$(INC_PATH) $(LDFLAGS) $(py_ldflags)
 
 cjson:
 	make -C "cjson/"
@@ -77,6 +87,17 @@ condition_libs:
 test_route_enforcer: test_bin_dir cjson $(OBJS)
 	$(CC) $(CFLAGS) -o $(TEST_BIN_PATH)route_enforcer_test $(TEST_PATH)route_enforcer_test.c $(OPTS) $(OBJS) -I$(INC_PATH) $(LDFLAGS)
 
+test_link_manager: test_bin_dir $(OBJS)
+	$(CC) $(CFLAGS) -o $(TEST_BIN_PATH)link_manager_test $(TEST_PATH)link_manager_test.c $(OPTS) $(OBJS) -I$(INC_PATH) $(LDFLAGS)
+
+#include "../list.h"
+#include "../flow_manager/route_enforcer.h"
+#include "../resource_manager.h"
+#include "../path_metrics/path_metric_interface.h"
+#include "../util.h"
+
+$(BUILD_PATH)pca_ps.o: $(SRC_PATH)path_selection/pca_ps.c $(SRC_PATH)path_selection/pca_ps.h $(SRC_PATH)list.h $(SRC_PATH)flow_manager/route_enforcer.h $(SRC_PATH)resource_manager.h $(SRC_PATH)path_metrics/path_metric_interface.h  $(SRC_PATH)util.h
+	$(CC) $(CFLAGS) $(py_includes) -c $(SRC_PATH)path_selection/pca_ps.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) $(py_ldflags) -o $(BUILD_PATH)pca_ps.o
 
 $(BUILD_PATH)condition.o: $(SRC_PATH)conditions/condition.c $(SRC_PATH)conditions/condition.h $(SRC_PATH)policy.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)conditions/condition.c  -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)condition.o
@@ -111,8 +132,14 @@ $(BUILD_PATH)bandwidth_parser.o: $(SRC_PATH)bandwidth_parser.c $(SRC_PATH)bandwi
 $(BUILD_PATH)resource_manager.o: $(SRC_PATH)resource_manager.c $(SRC_PATH)resource_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)resource_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)resource_manager.o
 
-$(BUILD_PATH)link_manager.o: $(SRC_PATH)link_manager.c $(SRC_PATH)link_manager.h
-	$(CC) $(CFLAGS) -c $(SRC_PATH)link_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_manager.o
+$(BUILD_PATH)exec_link_manager.o: $(SRC_PATH)exec_link_manager.c $(SRC_PATH)exec_link_manager.h
+	$(CC) $(CFLAGS) -c $(SRC_PATH)exec_link_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)exec_link_manager.o
+
+$(BUILD_PATH)mnl_link_manager.o: $(SRC_PATH)mnl_link_manager.c $(SRC_PATH)mnl_link_manager.h
+	$(CC) $(CFLAGS) -c $(SRC_PATH)mnl_link_manager.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)mnl_link_manager.o
+
+$(BUILD_PATH)link_manager_interface.o: $(SRC_PATH)link_manager_interface.c $(SRC_PATH)link_manager_interface.h
+	$(CC) $(CFLAGS) -c $(SRC_PATH)link_manager_interface.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_manager_interface.o
 
 $(BUILD_PATH)link_loader.o: $(SRC_PATH)link_loader.c $(SRC_PATH)resource_manager.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)link_loader.c -I$(INC_PATH) $(OPTS) $(LDFLAGS) -o $(BUILD_PATH)link_loader.o
@@ -137,7 +164,6 @@ $(BUILD_PATH)policy_loader.o: $(BUILD_PATH)util.o $(BUILD_PATH)list.o cjson/cJSO
 
 $(BUILD_PATH)policy_definition.o: $(SRC_PATH)policy.h $(SRC_PATH)policy_definition.c
 	$(CC) $(CFLAGS) -c $(SRC_PATH)policy_definition.c -o $(BUILD_PATH)policy_definition.o
-
 
 $(BUILD_PATH)util.o: $(SRC_PATH)util.c $(SRC_PATH)util.h
 	$(CC) $(CFLAGS) -c $(SRC_PATH)util.c -I$(INC_PATH) $(LDFLAGS) $(OPTS) -o $(BUILD_PATH)util.o

@@ -14,7 +14,7 @@
 #include "queue.h"
 #include "list.h"
 #include "link_monitor.h"
-#include "link_manager.h"
+#include "link_manager_interface.h"
 #include "debug.h"
 #include "resource_manager.h"
 #include "application_rules.h"
@@ -148,9 +148,9 @@ void condition_cb(struct condition *c, void *data)
             print_verb("Performing Hard Action\n");
             switch(action_get_action(action)) {
                 case ACTION_DISABLE:
-                    link_manager_down(action_get_link_name(action));
+                    async_link_manager_down(action_get_link_name(action));
                 case ACTION_ENABLE:
-                    link_manager_up(action_get_link_name(action));
+                    async_link_manager_up(action_get_link_name(action));
             }
         } else if (act_mode == ACTION_MODE_SOFT) {
             Litem *net_res = (Litem*)0;
@@ -375,7 +375,7 @@ int main(void)
     mon_data.lock = &update_lock;
     mon_data.barrier = &update_barrier;
 
-    pthread_create(&monitor_thread, NULL,
+    pthread_create(&monitor_thread, 0,
                    (void*)&init_monitor, (void*)&mon_data);
 
     ccbd.netres_list = netres_list;

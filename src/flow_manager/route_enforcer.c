@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
+
+#ifdef USE_PCA
+#include "../path_selection/pca_ps.h"
+#endif
+
 #include "../list.h"
 #include "route_enforcer.h"
 #include "../resource_manager.h"
@@ -326,6 +331,37 @@ struct network_resource * route_selector_resource_loop(
   struct application_spec *spec,
   int try_backup)
 {
+
+#ifdef USE_PCA
+    uint32_t address = 0;
+    Litem *resource_item;
+
+    if(list_size(resource_list) <= 0){
+        return (struct network_resource *)0;
+    }
+
+    if(list_size(resource_list) == 1){
+        struct network_resource *nr = (struct network_resource *)(resource_list->front->data);
+        return nr;
+    }
+
+    address = pca_path_selection(resource_list, spec);
+
+    if(!address){
+        return (struct network_resource *)0;
+    }
+
+    list_for_each(resource_item, resource_list){
+        struct network_resource *nr = (struct network_resource*)0;
+        if(address == network_resource_get_address(nr)){
+            return (struct network_resource *)nr;
+        }
+    }
+
+    return (struct network_resource *)0;
+
+#else
+
     Litem *resource_item;
     struct network_resource *candidate = (struct network_resource *)0;
 
@@ -360,6 +396,7 @@ struct network_resource * route_selector_resource_loop(
     }
 
     return candidate;
+#endif
 }
 
 int route_selector(List * resource_list, List * app_specs, List * iptables_rules)
