@@ -101,9 +101,11 @@ int get_ping_stats(char *host, char *bind, struct path_stats *stats)
             metric_set_delay(stats, -1.00);
             return -1;
         } else if(strstr(line, "loss")){
+            print_verb("%s\n", line);
             metric_set_loss(stats, get_loss_stat(line));
         } else if(strstr(line, "rtt")){
             char *pch, *pch2, *ptr;
+            print_verb("%s\n", line);
             pch = strtok (line, "=");
             pch = strtok (NULL, "=");
 
