@@ -49,7 +49,7 @@ int iptables_remove_snat(void)
 
     strcpy(cmd, "iptables -t nat -L POSTROUTING");
 
-    output = execv_and_pipe("/usr/local/sbin/iptables", cmd, &pid);
+    output = execv_and_pipe("iptables", cmd, &pid);
 
     if(!output){
         print_error("Could not exec iptables\n");
@@ -78,7 +78,7 @@ int iptables_remove_snat(void)
             }
             strcpy(address, match);
 
-            sprintf(rule, "/usr/local/sbin/iptables -t nat -D POSTROUTING -m mark --mark %s -j SNAT --to-source %s",  mark, address);
+            sprintf(rule, "iptables -t nat -D POSTROUTING -m mark --mark %s -j SNAT --to-source %s",  mark, address);
 
             printf("Delete RULE: %s\n", rule);
 
@@ -112,16 +112,16 @@ int init_iptables_context(void)
 
     iptables_remove_snat();
 
-    iptables_run("/usr/local/sbin/iptables -D OUTPUT -t mangle -j CONTEXT");
+    iptables_run("iptables -D OUTPUT -t mangle -j CONTEXT");
 
     iptables_flush_chain("CONTEXT", "mangle");
     iptables_delete_chain("CONTEXT", "mangle");
     iptables_create_chain("CONTEXT", "mangle");
 
-    iptables_run("/usr/local/sbin/iptables -A OUTPUT -t mangle -j CONTEXT");
-    iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --restore-mark");
-    iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -m mark ! --mark 0 -j ACCEPT");
-    iptables_run("/usr/local/sbin/iptables -A CONTEXT -t mangle -j CONNMARK --save-mark");
+    iptables_run("iptables -A OUTPUT -t mangle -j CONTEXT");
+    iptables_run("iptables -A CONTEXT -t mangle -j CONNMARK --restore-mark");
+    iptables_run("iptables -A CONTEXT -t mangle -m mark ! --mark 0 -j ACCEPT");
+    iptables_run("iptables -A CONTEXT -t mangle -j CONNMARK --save-mark");
 
     return ret_val;
 }
