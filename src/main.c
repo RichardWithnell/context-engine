@@ -372,6 +372,8 @@ int main(void)
 
     ph_state = policy_handler_init(netres_list, application_specs);
 
+    print_debug("Policy Handler Init Done\n");
+
     mon_data.queue = &update_queue;
     mon_data.lock = &update_lock;
     mon_data.barrier = &update_barrier;
@@ -379,11 +381,15 @@ int main(void)
     pthread_create(&monitor_thread, 0,
                    (void*)&init_monitor, (void*)&mon_data);
 
+    print_debug("Created Monitor Thread\n");
+
     ccbd.netres_list = netres_list;
     ccbd.application_specs = application_specs;
     ccbd.iptables_rules = policy_handler_state_get_rules(ph_state);
 
     context_library_start(context_libs, condition_cb, ph_state);
+
+    print_debug("Start Context libs\n");
 
     while(running) {
         print_verb("Waiting on barrier\n");
