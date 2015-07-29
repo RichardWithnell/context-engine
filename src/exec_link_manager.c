@@ -18,14 +18,27 @@ int exec_link_manager(char * ifname, int action)
     char *cmd = (char*)0;
     int ret_code = 0;
 
+    if(!ifname){
+        print_error("Interface Name Is null\n");
+        return -1;
+    }
+
     if(action == LINK_UP){
-        cmd = malloc(strlen("ifup ")+strlen(ifname)+1);
+        cmd = malloc(32);
+        if(!cmd){
+            return -1;
+        }
+        strcpy(cmd, "");
         strcat(cmd, "ifup ");
         strcat(cmd, ifname);
         print_verb("CMD: %s\n", cmd);
         output = execv_and_pipe("/sbin/ifup", cmd, &pid);
     } else if (action == LINK_DOWN) {
-        cmd = malloc(strlen("ifdown ")+strlen(ifname)+1);
+        cmd = malloc(32);
+        if(!cmd){
+            return -1;
+        }
+        strcpy(cmd, "");
         strcat(cmd, "ifdown ");
         strcat(cmd, ifname);
         print_verb("CMD: %s\n", cmd);

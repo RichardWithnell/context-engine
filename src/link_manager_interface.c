@@ -23,7 +23,8 @@ int link_manager_up(char *ifname)
 void * async_link_down(void *data)
 {
     char *ifname = (char*)0;
-    ifname = data;
+    ifname = (char*)data;
+    if(!ifname) return (void*)0;
     link_manager_down(ifname);
     return (void*)0;
 }
@@ -31,7 +32,8 @@ void * async_link_down(void *data)
 void * async_link_up(void *data)
 {
     char *ifname = (char*)0;
-    ifname = data;
+    ifname = (char*)data;
+    if(!ifname) return (void*)0;
     link_manager_up(ifname);
     return (void*)0;
 }
@@ -39,6 +41,7 @@ void * async_link_up(void *data)
 int async_link_manager_down(char *ifname)
 {
     pthread_t thread;
+    if(!ifname) return -1;
     pthread_create(&thread, 0, (void*)&async_link_down, (void*)ifname);
     return 0;
 }
@@ -46,6 +49,7 @@ int async_link_manager_down(char *ifname)
 int async_link_manager_up(char *ifname)
 {
     pthread_t thread;
+    if(!ifname) return -1;
     pthread_create(&thread, 0, (void*)&async_link_up, (void*)ifname);
     return 0;
 }

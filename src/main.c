@@ -146,11 +146,12 @@ void condition_cb(struct condition *c, void *data)
 
         if(act_mode == ACTION_MODE_HARD){
             print_verb("Performing Hard Action\n");
+            char *lname = action_get_link_name(action);
             switch(action_get_action(action)) {
                 case ACTION_DISABLE:
-                    async_link_manager_down(action_get_link_name(action));
+                    async_link_manager_down(lname);
                 case ACTION_ENABLE:
-                    async_link_manager_up(action_get_link_name(action));
+                    async_link_manager_up(lname);
             }
         } else if (act_mode == ACTION_MODE_SOFT) {
             Litem *net_res = (Litem*)0;

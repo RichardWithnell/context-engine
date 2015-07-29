@@ -55,6 +55,11 @@ int iptables_run(char * command)
 
     output = execv_and_pipe("iptables", cmd, &pid);
 
+    if(!output){
+        print_error("Failed to exec iptables\n");
+        return -1;
+    }
+
     while(fgets(line, sizeof(line), output)) {
         //print_debug("iptables: %s\n", line);
     }

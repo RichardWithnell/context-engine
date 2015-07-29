@@ -119,7 +119,7 @@ FILE * execv_and_pipe(char * binary, char *command, int *pid_out)
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
 
-        execv(binary, cmd);
+        execvp(binary, cmd);
     }
 
     close(pipefd[1]);

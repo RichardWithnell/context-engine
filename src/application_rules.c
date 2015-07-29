@@ -48,6 +48,12 @@ struct application_spec *application_spec_alloc(void)
     as->dport = 0;
     as->sport = 0;
     as->proto = 0;
+    as->allocate = 0;
+    as->multipath = 0;
+    as->required_bw = 0;
+    as->required_loss = 0;
+    as->required_latency = 0;
+    as->required_jitter = 0;
     return as;
 }
 
@@ -255,7 +261,7 @@ List * load_application_specs(char *config_file)
                 cJSON *app_spec;
                 cJSON *requirement;
 
-                as = malloc(sizeof(struct application_spec));
+                as = application_spec_alloc();
 
                 app_spec = cJSON_GetObjectItem(spec, "application");
                 if(app_spec){
