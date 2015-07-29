@@ -127,6 +127,7 @@ int init_condition(register_key_cb_t reg_cb, void *data)
 
 float read_voltage_file(void)
 {
+    static failure = 0;
     int fd;
     char line[512];
     ssize_t n;
@@ -135,13 +136,17 @@ float read_voltage_file(void)
     memset(line, 0, 512);
     fd = open(battery_voltage_file, O_RDONLY);
     if (fd == -1){
-         print_error("Failed to open battery voltage file\n");
-         return 5.00;
+        if(!failure)
+            print_error("Failed to open battery voltage file\n");
+        failure = 1;
+        return 5.00;
     }
 
     n = read(fd, line, 512);
     if (n == -1){
-        print_error("Failed to read from battery voltage file\n");
+        if(!failure)
+            print_error("Failed to read from battery voltage file\n");
+        failure = 1;
         return 5.00;
     }
 

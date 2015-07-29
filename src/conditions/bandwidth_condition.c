@@ -199,6 +199,7 @@ int init_condition(register_key_cb_t reg_cb, void *data)
 
 uint32_t read_bandwidth_file(void)
 {
+    static failure = 0;
     int fd;
     char line[512];
     ssize_t n;
@@ -207,13 +208,17 @@ uint32_t read_bandwidth_file(void)
     memset(line, 0, 512);
     fd = open(battery_voltage_file, O_RDONLY);
     if (fd == -1){
-         print_error("Failed to open bandwidth_consumption file\n");
-         return 5.00;
+        if(!failure)
+            print_error("Failed to open bandwidth_consumption file\n");
+        failure = 1;
+        return 5.00;
     }
 
     n = read(fd, line, 512);
     if (n == -1){
-        print_error("Failed to read from bandwidth_consumption file\n");
+        if(!failure)
+            print_error("Failed to read from bandwidth_consumption file\n");
+        failure = 1;
         return 5.00;
     }
 

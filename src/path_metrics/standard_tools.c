@@ -85,7 +85,7 @@ int get_ping_stats(char *host, char *bind, struct path_stats *stats)
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
-        execl("/bin/ping", "/bin/ping", "-I", bind, "-c", "10", "-q", host, (char*)NULL);
+        execlp("ping", "ping", "-I", bind, "-c", "10", "-q", host, (char*)NULL);
     }
 
     //Only parent gets here. Listen to what the tail says
@@ -147,7 +147,7 @@ int get_abing_bandwidth(char *host, char *localaddr, struct path_stats *stats)
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
-        execl("/usr/bin/abing", "/usr/bin/abing", "-d", host, "-B", localaddr, (char*)NULL);
+        execlp("abing", "abing", "-d", host, "-B", localaddr, (char*)NULL);
     }
 
     //Only parent gets here. Listen to what the tail says
@@ -219,7 +219,7 @@ int get_iperf_bandwidth(char *host, char *localaddr, struct path_stats *stats)
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         dup2(pipefd[1], STDERR_FILENO);
-        execl("/usr/bin/iperf", "/usr/bin/iperf", "-c", host, "-B", localaddr, "-y", "C", (char*)NULL);
+        execlp("iperf", "iperf", "-c", host, "-B", localaddr, "-y", "C", (char*)NULL);
     }
 
     //Only parent gets here. Listen to what the tail says
