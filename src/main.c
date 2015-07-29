@@ -30,7 +30,7 @@
 #define POLICY_CONFIG "./config/policy.cfg\0"
 #define APPLICATION_CONFIG "./config/application.cfg\0"
 
-#define MEASUREMENT_ENDPOINT "optiplex-lab.noip.me\0"
+#define MEASUREMENT_ENDPOINT "10.255.255.10\0"
 
 int running = 1;
 sem_t update_barrier;

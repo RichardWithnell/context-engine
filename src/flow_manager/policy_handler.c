@@ -430,7 +430,7 @@ struct policy_handler_state * policy_handler_init(List *network_resources, List 
 
         pthread_create(&mptcp_thread, 0, mptcp_control_start, mp_state);
 
-        print_error("MPTCP Thread Started\n");
+        print_debug("MPTCP Thread Started\n");
 
     } else {
         print_error("Host is not MP-Capable\n");
